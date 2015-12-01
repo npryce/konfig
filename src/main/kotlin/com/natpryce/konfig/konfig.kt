@@ -6,6 +6,10 @@ class Misconfiguration(val key: Key<*>, message: String, cause: Exception? = nul
 
 data class Key<T>(val name: String, val parse: (String) -> T)
 
+val stringType = String::toString
+val intType = String::toInt
+val doubleType = String::toDouble
+
 interface Config {
     @Throws(Misconfiguration::class)
     fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T
@@ -23,6 +27,13 @@ interface Config {
 class ConfigProperties(private val properties: Properties) : Config {
     override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T)
             = properties.getProperty(key.name)?.let(key.parse) ?: default(key)
+}
+
+class ConfigMap(private val properties: Map<String,String>) : Config {
+    constructor(vararg entries: Pair<String,String>) : this(mapOf(*entries))
+
+    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T)
+            = properties[key.name]?.let(key.parse) ?: default(key)
 }
 
 class EnvironmentVariables(val prefix: String = "", private val lookup: (String) -> String? = System::getenv) : Config {
