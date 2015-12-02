@@ -7,7 +7,7 @@ import java.util.*
 
 
 class FromProperties {
-    val config = ConfigProperties(Properties().apply {
+    val config = ConfigurationProperties(Properties().apply {
         setProperty("name", "alice")
         setProperty("x", "1")
         setProperty("y", "2")
@@ -30,7 +30,7 @@ class FromProperties {
 }
 
 class FromMap {
-    val config = ConfigMap("name" to "alice", "x" to "1", "y" to "2")
+    val config = ConfigurationMap("name" to "alice", "x" to "1", "y" to "2")
 
     val name = Key("name", stringType)
     val x = Key("x", intType)
@@ -88,8 +88,8 @@ class FromEnvironment {
 class OverridingAndFallingBack {
     @Test
     fun overrides_default_properties() {
-        val defaults = ConfigMap("x" to "x", "y" to "y")
-        val overrides = ConfigMap("x" to "XX", "z" to "ZZ")
+        val defaults = ConfigurationMap("x" to "x", "y" to "y")
+        val overrides = ConfigurationMap("x" to "XX", "z" to "ZZ")
 
         val config = Override(overrides, defaults)
 
@@ -102,7 +102,7 @@ class OverridingAndFallingBack {
 class ConfigSubset {
     @Test
     fun subset_properties() {
-        val original = ConfigMap("a.one" to "a1", "a.two" to "a2", "b.one" to "b1", "b.two" to "b2")
+        val original = ConfigurationMap("a.one" to "a1", "a.two" to "a2", "b.one" to "b1", "b.two" to "b2")
 
         val configA = Subset("a", original)
         val configB = Subset("b", original)
