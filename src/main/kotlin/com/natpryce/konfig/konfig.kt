@@ -29,6 +29,8 @@ class ConfigProperties(private val properties: Properties) : Config {
             = properties.getProperty(key.name)?.let(key.parse) ?: default(key)
 }
 
+fun systemProperties() = ConfigProperties(System.getProperties())
+
 class ConfigMap(private val properties: Map<String, String>) : Config {
     constructor(vararg entries: Pair<String, String>) : this(mapOf(*entries))
 
