@@ -14,8 +14,8 @@ class FromProperties {
     })
 
     val name = Key("name") { it }
-    val x = Key("x", String::toInt)
-    val y = Key("y", String::toInt)
+    val x = Key("x", intType)
+    val y = Key("y", intType)
 
     @Test
     fun looks_up_string_properties() {
@@ -32,9 +32,9 @@ class FromProperties {
 class FromMap {
     val config = ConfigMap("name" to "alice", "x" to "1", "y" to "2")
 
-    val name = Key("name", String::toString)
-    val x = Key("x", String::toInt)
-    val y = Key("y", String::toInt)
+    val name = Key("name", stringType)
+    val x = Key("x", intType)
+    val y = Key("y", intType)
 
     @Test
     fun looks_up_string_properties() {
@@ -55,8 +55,8 @@ class FromEnvironment {
         val env = mapOf("X" to "1", "Y" to "2")
         val config = EnvironmentVariables(lookup = { varname -> env[varname] })
 
-        val x = Key("x", String::toInt)
-        val y = Key("y", String::toInt)
+        val x = Key("x", intType)
+        val y = Key("y", intType)
 
         assertThat(config[x], equalTo(1))
         assertThat(config[y], equalTo(2))
@@ -67,8 +67,8 @@ class FromEnvironment {
         val env = mapOf("NAME_FIRST" to "alice", "NAME_LAST" to "band")
         val config = EnvironmentVariables(lookup = { varname -> env[varname] })
 
-        val firstName = Key("name.first", String::toString)
-        val lastName = Key("name.last", String::toString)
+        val firstName = Key("name.first", stringType)
+        val lastName = Key("name.last", stringType)
 
         assertThat(config[firstName], equalTo("alice"))
         assertThat(config[lastName], equalTo("band"))
@@ -79,7 +79,7 @@ class FromEnvironment {
         val env = mapOf("XXX_NAME" to "alice")
         val config = EnvironmentVariables(prefix="XXX_", lookup = { varname -> env[varname] })
 
-        val name = Key("name", String::toString)
+        val name = Key("name", stringType)
 
         assertThat(config[name], equalTo("alice"))
     }
@@ -93,8 +93,27 @@ class OverridingAndFallingBack {
 
         val config = Override(overrides, defaults)
 
-        assertThat(config[Key("x", String::toString)], equalTo("XX"))
-        assertThat(config[Key("y", String::toString)], equalTo("y"))
-        assertThat(config[Key("z", String::toString)], equalTo("ZZ"))
+        assertThat(config[Key("x", stringType)], equalTo("XX"))
+        assertThat(config[Key("y", stringType)], equalTo("y"))
+        assertThat(config[Key("z", stringType)], equalTo("ZZ"))
+    }
+}
+
+class ConfigSubset {
+    @Test
+    fun subset_properties() {
+        val original = ConfigMap("a.one" to "a1", "a.two" to "a2", "b.one" to "b1", "b.two" to "b2")
+
+        val configA = Subset("a", original)
+        val configB = Subset("b", original)
+
+        val key1 = Key("one", stringType)
+        val key2 = Key("two", stringType)
+
+        assertThat(configA[key1], equalTo("a1"))
+        assertThat(configA[key2], equalTo("a2"))
+
+        assertThat(configB[key1], equalTo("b1"))
+        assertThat(configB[key2], equalTo("b2"))
     }
 }

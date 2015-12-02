@@ -15,7 +15,7 @@ interface Config {
     fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T
 
     @Throws(Misconfiguration::class)
-    operator fun <T> get(key: Key<T>): T = getOrElse(key) { key -> propertyMissing(key)}
+    operator fun <T> get(key: Key<T>): T = getOrElse(key) { key -> propertyMissing(key) }
 
     @Throws(Misconfiguration::class)
     fun <T> getOrElse(key: Key<T>, default: T): T = getOrElse(key) { default }
@@ -29,25 +29,31 @@ class ConfigProperties(private val properties: Properties) : Config {
             = properties.getProperty(key.name)?.let(key.parse) ?: default(key)
 }
 
-class ConfigMap(private val properties: Map<String,String>) : Config {
-    constructor(vararg entries: Pair<String,String>) : this(mapOf(*entries))
+class ConfigMap(private val properties: Map<String, String>) : Config {
+    constructor(vararg entries: Pair<String, String>) : this(mapOf(*entries))
 
-    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T)
-            = properties[key.name]?.let(key.parse) ?: default(key)
+    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T) =
+            properties[key.name]?.let(key.parse) ?: default(key)
 }
 
 class EnvironmentVariables(val prefix: String = "", private val lookup: (String) -> String? = System::getenv) : Config {
-    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T {
-        return lookup(toEnvironmentVariable(key))?.let(key.parse)?:default(key)
-    }
+    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T) =
+            lookup(toEnvironmentVariable(key))?.let(key.parse) ?: default(key)
 
-    override fun propertyMissing(key: Key<*>) = throw Misconfiguration(key, "${toEnvironmentVariable(key)} environment variable not found")
+    override fun propertyMissing(key: Key<*>) =
+            throw Misconfiguration(key, "${toEnvironmentVariable(key)} environment variable not found")
 
-    private fun <T> toEnvironmentVariable(key: Key<T>) = prefix + key.name.toUpperCase().replace('.', '_')
+    private fun <T> toEnvironmentVariable(key: Key<T>) =
+            prefix + key.name.toUpperCase().replace('.', '_')
 }
 
 class Override(val override: Config, val fallback: Config) : Config {
     override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T)
             = override.getOrElse(key) { fallback.getOrElse(key, default) }
 
+}
+
+class Subset(val namePrefix: String, private val config: Config) : Config {
+    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T) =
+            config.getOrElse(key.copy(name = namePrefix + "." + key.name), default)
 }
