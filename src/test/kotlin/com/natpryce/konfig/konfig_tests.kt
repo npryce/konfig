@@ -3,6 +3,7 @@ package com.natpryce.konfig
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
 import org.junit.Test
+import java.io.File
 import java.util.*
 
 
@@ -115,5 +116,26 @@ class ConfigSubset {
 
         assertThat(configB[key1], equalTo("b1"))
         assertThat(configB[key2], equalTo("b2"))
+    }
+}
+
+class FromResources {
+    val a = Key("a", intType)
+    val b = Key("b", stringType)
+
+    @Test
+    fun can_load_from_resources() {
+        val config = ConfigurationProperties.fromResource(javaClass, "example.properties")
+
+        assertThat(config[a], equalTo(1))
+        assertThat(config[b], equalTo("two"))
+    }
+
+    @Test
+    fun can_load_from_file() {
+        val config = ConfigurationProperties.fromFile(File("src/test/resources/com/natpryce/konfig/example.properties"))
+
+        assertThat(config[a], equalTo(1))
+        assertThat(config[b], equalTo("two"))
     }
 }

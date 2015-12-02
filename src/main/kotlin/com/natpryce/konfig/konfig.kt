@@ -1,11 +1,14 @@
 package com.natpryce.konfig
 
+import java.io.File
+import java.io.InputStream
 import java.util.*
+import kotlin.reflect.KClass
 
 /**
  * Error thrown when a mandatory property is missing
  */
-class Misconfiguration(val key: Key<*>, message: String, cause: Exception? = null) : Exception(message, cause)
+class Misconfiguration(message: String, cause: Exception? = null) : Exception(message, cause)
 
 /**
  * A key that identifies a named, typed property and can convert a string representation into a value of the type.
@@ -47,7 +50,7 @@ interface Configuration {
      * for the exception.
      */
     @Throws(Misconfiguration::class)
-    operator fun <T> get(key: Key<T>): T = getOrElse(key) { key -> throw Misconfiguration(key, missingPropertyMessage(key)) }
+    operator fun <T> get(key: Key<T>): T = getOrElse(key) { key -> throw Misconfiguration(missingPropertyMessage(key)) }
 
     /**
      * Look up a property value identified by [key], or return [default] with the key if there is no definition of the
@@ -76,12 +79,31 @@ interface Configuration {
 class ConfigurationProperties(private val properties: Properties) : Configuration {
     override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T)
             = properties.getProperty(key.name)?.let(key.parse) ?: default(key)
+
+    companion object {
+        /**
+         * Returns the system properties as a Config object.
+         */
+        fun systemProperties() = ConfigurationProperties(System.getProperties())
+
+        /**
+         * Load from resources relative to a class
+         */
+        fun fromResource(relativeToClass: Class<*>, resourceName: String) =
+                load(relativeToClass.getResourceAsStream(resourceName)) { "resource $resourceName not found" }
+
+        /**
+         * Load from file
+         */
+        fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null) { "file $file does not exist" }
+
+        private fun load(input: InputStream?, errorMessageFn: () -> String) =
+                (input ?: throw Misconfiguration(errorMessageFn())).use {
+                    ConfigurationProperties(Properties().apply { load(input) })
+                }
+    }
 }
 
-/**
- * Returns the system properties as a Config object.
- */
-fun systemProperties() = ConfigurationProperties(System.getProperties())
 
 /**
  * Configuration stored in a map.
