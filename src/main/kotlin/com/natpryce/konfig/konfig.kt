@@ -54,17 +54,21 @@ interface Configuration {
 
     /**
      * Look up a property value identified by [key], or return [default] with the key if there is no definition of the
-     * property defined.
+     * property.
      */
-    @Throws(Misconfiguration::class)
     fun <T> getOrElse(key: Key<T>, default: T): T = getOrElse(key) { default }
 
     /**
-     * Look up a property value identified by [key], or call [default] with the key if there is no definition of the
-     * property defined.
+     * Look up a property value identified by [key], or return `null` if there is no definition of the
+     * property.
      */
-    @Throws(Misconfiguration::class)
-    fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T
+    fun <T> getOrNull(key: Key<T>): T?
+
+    /**
+     * Look up a property value identified by [key], or call [default] with the key if there is no definition of the
+     * property.
+     */
+    fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T = getOrNull(key)?:default(key)
 
     /**
      * The message used for the [Misconfiguration] exception thrown by [get] when there is no property defined
@@ -77,8 +81,7 @@ interface Configuration {
  * Configuration stored in a [Properties] object.
  */
 class ConfigurationProperties(private val properties: Properties) : Configuration {
-    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T)
-            = properties.getProperty(key.name)?.let(key.parse) ?: default(key)
+    override fun <T> getOrNull(key: Key<T>) = properties.getProperty(key.name)?.let(key.parse)
 
     companion object {
         /**
@@ -127,8 +130,7 @@ class ConfigurationMap(private val properties: Map<String, String>) : Configurat
      */
     constructor(vararg entries: Pair<String, String>) : this(mapOf(*entries))
 
-    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T) =
-            properties[key.name]?.let(key.parse) ?: default(key)
+    override fun <T> getOrNull(key: Key<T>) = properties[key.name]?.let(key.parse)
 }
 
 /**
@@ -142,8 +144,7 @@ class ConfigurationMap(private val properties: Map<String, String>) : Configurat
  *
  */
 class EnvironmentVariables(val prefix: String = "", private val lookup: (String) -> String? = System::getenv) : Configuration {
-    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T) =
-            lookup(toEnvironmentVariable(key))?.let(key.parse) ?: default(key)
+    override fun <T> getOrNull(key: Key<T>) = lookup(toEnvironmentVariable(key))?.let(key.parse)
 
     override fun <T> missingPropertyMessage(key: Key<T>) = "${toEnvironmentVariable(key)} environment variable not found"
 
@@ -154,9 +155,7 @@ class EnvironmentVariables(val prefix: String = "", private val lookup: (String)
  * Looks up configuration in [override] and, if the property is not defined there, looks it up in [fallback].
  */
 class Override(val override: Configuration, val fallback: Configuration) : Configuration {
-    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T)
-            = override.getOrElse(key) { fallback.getOrElse(key, default) }
-
+    override fun <T> getOrNull(key: Key<T>) = override.getOrNull(key)?:fallback.getOrNull(key)
 }
 
 infix fun Configuration.overriding(defaults: Configuration) = Override(this, defaults)
@@ -171,6 +170,11 @@ infix fun Configuration.overriding(defaults: Configuration) = Override(this, def
  * delegated to [configuration] as a look up for "db.password".
  */
 class Subset(val namePrefix: String, private val configuration: Configuration) : Configuration {
-    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T) =
-            configuration.getOrElse(key.copy(name = namePrefix + "." + key.name), default)
+    override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(prefixed(key))
+
+    override fun <T> missingPropertyMessage(key: Key<T>): String {
+        return configuration.missingPropertyMessage(prefixed(key))
+    }
+
+    private fun <T> prefixed(key: Key<T>) = key.copy(name = namePrefix + "." + key.name)
 }
