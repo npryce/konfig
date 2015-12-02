@@ -90,12 +90,25 @@ class ConfigurationProperties(private val properties: Properties) : Configuratio
          * Load from resources relative to a class
          */
         fun fromResource(relativeToClass: Class<*>, resourceName: String) =
-                load(relativeToClass.getResourceAsStream(resourceName)) { "resource $resourceName not found" }
+                load(relativeToClass.getResourceAsStream(resourceName)) {
+                    "resource $resourceName not found"
+                }
+
+        /**
+         * Load from resource within the same classloader that loaded the Konfig library (probably the
+         * system classloader)
+         */
+        fun fromResource(resourceName: String) =
+                load(ConfigurationProperties::class.java.classLoader.getResourceAsStream(resourceName)) {
+                    "resource $resourceName not found"
+                }
 
         /**
          * Load from file
          */
-        fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null) { "file $file does not exist" }
+        fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null) {
+            "file $file does not exist"
+        }
 
         private fun load(input: InputStream?, errorMessageFn: () -> String) =
                 (input ?: throw Misconfiguration(errorMessageFn())).use {
@@ -145,6 +158,8 @@ class Override(val override: Configuration, val fallback: Configuration) : Confi
             = override.getOrElse(key) { fallback.getOrElse(key, default) }
 
 }
+
+infix fun Configuration.overriding(defaults: Configuration) = Override(this, defaults)
 
 /**
  * Represents a subset of a larger set of configuration properties.

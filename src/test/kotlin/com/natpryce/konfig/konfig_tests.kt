@@ -92,7 +92,7 @@ class OverridingAndFallingBack {
         val defaults = ConfigurationMap("x" to "x", "y" to "y")
         val overrides = ConfigurationMap("x" to "XX", "z" to "ZZ")
 
-        val config = Override(overrides, defaults)
+        val config = overrides overriding defaults
 
         assertThat(config[Key("x", stringType)], equalTo("XX"))
         assertThat(config[Key("y", stringType)], equalTo("y"))
@@ -124,8 +124,16 @@ class FromResources {
     val b = Key("b", stringType)
 
     @Test
-    fun can_load_from_resources() {
+    fun can_load_from_resource() {
         val config = ConfigurationProperties.fromResource(javaClass, "example.properties")
+
+        assertThat(config[a], equalTo(1))
+        assertThat(config[b], equalTo("two"))
+    }
+
+    @Test
+    fun can_load_from_absolute_resource() {
+        val config = ConfigurationProperties.fromResource("com/natpryce/konfig/example.properties")
 
         assertThat(config[a], equalTo(1))
         assertThat(config[b], equalTo("two"))
