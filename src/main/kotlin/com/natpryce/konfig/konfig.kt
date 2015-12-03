@@ -3,7 +3,6 @@ package com.natpryce.konfig
 import java.io.File
 import java.io.InputStream
 import java.util.*
-import kotlin.reflect.KClass
 
 /**
  * Error thrown when a mandatory property is missing
@@ -33,12 +32,11 @@ val stringType = String::toString
 /**
  * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
  */
-inline fun <reified T> numericType(crossinline parse: (String)->T): (String)->T {
-    return {s ->
+inline fun <reified T> numericType(crossinline parse: (String) -> T): (String) -> T {
+    return { s ->
         try {
             parse(s)
-        }
-        catch (e : NumberFormatException) {
+        } catch (e: NumberFormatException) {
             throw Misconfiguration("invalid ${T::class.simpleName}: $s", e)
         }
     }
@@ -93,7 +91,7 @@ interface Configuration {
      * Look up a property value identified by [key], or call [default] with the key if there is no definition of the
      * property.
      */
-    fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T = getOrNull(key)?:default(key)
+    fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T = getOrNull(key) ?: default(key)
 
     /**
      * The message used for the [Misconfiguration] exception thrown by [get] when there is no property defined
@@ -180,7 +178,11 @@ class EnvironmentVariables(val prefix: String = "", private val lookup: (String)
  * Looks up configuration in [override] and, if the property is not defined there, looks it up in [fallback].
  */
 class Override(val override: Configuration, val fallback: Configuration) : Configuration {
-    override fun <T> getOrNull(key: Key<T>) = override.getOrNull(key)?:fallback.getOrNull(key)
+    override fun <T> getOrNull(key: Key<T>) =
+            override.getOrNull(key) ?: fallback.getOrNull(key)
+
+    override fun <T> missingPropertyMessage(key: Key<T>) =
+            "${override.missingPropertyMessage(key)}, and ${fallback.missingPropertyMessage(key)}"
 }
 
 infix fun Configuration.overriding(defaults: Configuration) = Override(this, defaults)
@@ -195,11 +197,11 @@ infix fun Configuration.overriding(defaults: Configuration) = Override(this, def
  * delegated to [configuration] as a look up for "db.password".
  */
 class Subset(val namePrefix: String, private val configuration: Configuration) : Configuration {
-    override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(prefixed(key))
+    override fun <T> getOrNull(key: Key<T>) =
+            configuration.getOrNull(prefixed(key))
 
-    override fun <T> missingPropertyMessage(key: Key<T>): String {
-        return configuration.missingPropertyMessage(prefixed(key))
-    }
+    override fun <T> missingPropertyMessage(key: Key<T>) =
+            configuration.missingPropertyMessage(prefixed(key))
 
     private fun <T> prefixed(key: Key<T>) = key.copy(name = namePrefix + "." + key.name)
 }
