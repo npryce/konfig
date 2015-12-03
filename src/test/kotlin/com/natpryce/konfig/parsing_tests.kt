@@ -6,8 +6,22 @@ import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.describe
 import com.natpryce.hamkrest.equalTo
 import org.junit.Test
-import kotlin.reflect.KClass
 
+inline fun <reified T : Throwable> throws(): Matcher<() -> Unit> {
+    val exceptionName = T::class.qualifiedName
+
+    return object : Matcher.Primitive<() -> Unit>() {
+        override fun invoke(actual: () -> Unit): MatchResult =
+                try {
+                    actual()
+                    MatchResult.Mismatch("did not throw")
+                } catch (e: T) {
+                    MatchResult.Match
+                }
+
+        override fun description() = "throws $exceptionName"
+    }
+}
 
 class Parsing {
     @Test
@@ -80,22 +94,6 @@ class Parsing {
             assertThat(orig, parser(orig), equalTo(parsed))
         }
 
-    }
-
-    inline fun <reified T : Throwable> throws(): Matcher<() -> Unit> {
-        val exceptionName = T::class.qualifiedName
-
-        return object : Matcher.Primitive<() -> Unit>() {
-            override fun invoke(actual: () -> Unit): MatchResult =
-                    try {
-                        actual()
-                        MatchResult.Mismatch("did not throw")
-                    } catch (e: T) {
-                        MatchResult.Match
-                    }
-
-            override fun description() = "throws $exceptionName"
-        }
     }
 
     private fun <T> assertThrowsMisconfiguration(parser: (String) -> T, vararg bad_inputs: String) {
