@@ -18,7 +18,7 @@ class CommandLineParsing {
     @Test
     fun one_long_option_with_separator() {
         val (config, args) = parseArgs(arrayOf("--opt-x=bar","baz"),
-                CommandLineOption(optX, short="x", long="opt-x"))
+                CommandLineOption(optX))
 
         assertThat(config[optX], equalTo("bar"))
         assertThat(args, equalTo(listOf("baz")))
@@ -27,7 +27,7 @@ class CommandLineParsing {
     @Test
     fun one_long_option_as_two_args() {
         val (config, args) = parseArgs(arrayOf("--opt-x", "bar","baz"),
-                CommandLineOption(optX, short="x", long="opt-x"))
+                CommandLineOption(optX))
 
         assertThat(config[optX], equalTo("bar"))
         assertThat(args, equalTo(listOf("baz")))
@@ -36,7 +36,7 @@ class CommandLineParsing {
     @Test
     fun one_short_option() {
         val (config, args) = parseArgs(arrayOf("-x","bar","baz"),
-                CommandLineOption(optX, short="x", long="opt-x"))
+                CommandLineOption(optX, short="x"))
 
         assertThat(config[optX], equalTo("bar"))
         assertThat(args, equalTo(listOf("baz")))

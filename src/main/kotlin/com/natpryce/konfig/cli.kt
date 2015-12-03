@@ -1,13 +1,12 @@
 package com.natpryce.konfig
 
-import com.sun.xml.internal.ws.assembler.MetroConfigName
 import java.util.*
 
 
 data class CommandLineOption(
         val configKey: Key<*>,
-        val long: String,
-        val short: String?)
+        val long: String = configKey.name.replace('.', '-'),
+        val short: String? = null)
 {
     val configName: String get() = configKey.name
 }
