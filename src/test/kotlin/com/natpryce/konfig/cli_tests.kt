@@ -2,6 +2,7 @@ package com.natpryce.konfig
 
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
+import com.natpryce.hamkrest.throws
 import org.junit.Test
 
 

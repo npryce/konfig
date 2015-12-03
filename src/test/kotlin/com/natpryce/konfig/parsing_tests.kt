@@ -4,21 +4,6 @@ import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assertThat
 import org.junit.Test
 
-inline fun <reified T : Throwable> throws(exceptionCriteria: Matcher<T>? = null): Matcher<() -> Unit> {
-    val exceptionName = T::class.qualifiedName
-
-    return object : Matcher.Primitive<() -> Unit>() {
-        override fun invoke(actual: () -> Unit): MatchResult =
-                try {
-                    actual()
-                    MatchResult.Mismatch("did not throw")
-                } catch (e: T) {
-                    exceptionCriteria?.invoke(e) ?: MatchResult.Match
-                }
-
-        override fun description() = "throws $exceptionName that ${describe(exceptionCriteria)}"
-    }
-}
 
 class Parsing {
     @Test
