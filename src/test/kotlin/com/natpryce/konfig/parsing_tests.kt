@@ -1,13 +1,10 @@
 package com.natpryce.konfig
 
-import com.natpryce.hamkrest.MatchResult
-import com.natpryce.hamkrest.Matcher
+import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assertThat
-import com.natpryce.hamkrest.describe
-import com.natpryce.hamkrest.equalTo
 import org.junit.Test
 
-inline fun <reified T : Throwable> throws(): Matcher<() -> Unit> {
+inline fun <reified T : Throwable> throws(exceptionCriteria: Matcher<T>? = null): Matcher<() -> Unit> {
     val exceptionName = T::class.qualifiedName
 
     return object : Matcher.Primitive<() -> Unit>() {
@@ -16,10 +13,10 @@ inline fun <reified T : Throwable> throws(): Matcher<() -> Unit> {
                     actual()
                     MatchResult.Mismatch("did not throw")
                 } catch (e: T) {
-                    MatchResult.Match
+                    exceptionCriteria?.invoke(e) ?: MatchResult.Match
                 }
 
-        override fun description() = "throws $exceptionName"
+        override fun description() = "throws $exceptionName that ${describe(exceptionCriteria)}"
     }
 }
 
@@ -96,9 +93,12 @@ class Parsing {
 
     }
 
-    private fun <T> assertThrowsMisconfiguration(parser: (String) -> T, vararg bad_inputs: String) {
+    private inline fun <reified T> assertThrowsMisconfiguration(crossinline parser: (String) -> T, vararg bad_inputs: String) {
         for (bad_input in bad_inputs) {
-            assertThat(describe(bad_input), { parser(bad_input) }, throws<Misconfiguration>())
+            assertThat(describe(bad_input), { parser(bad_input) },
+                    throws<Misconfiguration>(has(Throwable::message, present(
+                            containsSubstring(bad_input) and containsSubstring(T::class.simpleName!!)
+                    ))))
         }
     }
 }

@@ -37,7 +37,7 @@ inline fun <reified T> numericType(crossinline parse: (String) -> T): (String) -
         try {
             parse(s)
         } catch (e: NumberFormatException) {
-            throw Misconfiguration("invalid ${T::class.simpleName}: $s", e)
+            throw Misconfiguration("invalid ${T::class.simpleName?:"value"}: $s", e)
         }
     }
 }
