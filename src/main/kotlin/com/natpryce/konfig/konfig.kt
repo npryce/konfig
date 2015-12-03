@@ -23,22 +23,47 @@ class Misconfiguration(message: String, cause: Exception? = null) : Exception(me
  * val retryCount = config\[RETRY_COUNT\]
  * ~~~~~~~~
  */
-data class Key<T>(val name: String, val parse: (String) -> T)
+data class Key<out T>(val name: String, val parse: (String) -> T)
 
 /**
- * A parser for string properties
+ * A parser for string properties (the identity function)
  */
 val stringType = String::toString
 
 /**
+ * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
+ */
+inline fun <reified T> numericType(crossinline parse: (String)->T): (String)->T {
+    return {s ->
+        try {
+            parse(s)
+        }
+        catch (e : NumberFormatException) {
+            throw Misconfiguration("invalid ${T::class.simpleName}: $s", e)
+        }
+    }
+}
+
+/**
  * A parser for Int properties
  */
-val intType = String::toInt
+val intType = numericType(String::toInt)
+
+/**
+ * A parser for Long properties
+ */
+val longType = numericType(String::toLong)
 
 /**
  * A parser for Double properties
  */
-val doubleType = String::toDouble
+val doubleType = numericType(String::toDouble)
+
+/**
+ * A parser for Boolean properties
+ */
+val booleanType = String::toBoolean
+
 
 /**
  * Looks up configuration properties.
