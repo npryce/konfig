@@ -27,17 +27,27 @@ class Misconfiguration(message: String, cause: Exception? = null) : Exception(me
 data class Key<out T>(val name: String, val parse: (String, () -> Provenance) -> T)
 
 
+/**
+ * Describes the location of configuration information.  A location may have a [uri] or may not, because it is
+ * compiled into the application or obtained from ephemeral data, such as the process environment or command-line
+ * parameters,
+ */
 data class Location(val description: String, val uri: URI? = null) {
     constructor(file: File) : this(file.absolutePath, file.toURI())
-
     constructor(uri: URI) : this(uri.toString(), uri)
 
     companion object {
+        /**
+         * Describes the location of configuration data that is compiled into the application, as resources
+         * or code that creates a [Configuration] object.
+         */
         val INTRINSIC = Location("intrinsic")
     }
 }
 
-
+/**
+ * Represents the location of a value looked up by a key.
+ */
 data class Provenance(val key: Key<*>, val source: Location, val nameInLocation: String)
 
 
@@ -79,6 +89,9 @@ interface Configuration {
 
     open fun contains(key: Key<*>) = getOrNull(key) != null
 
+    /**
+     * Report the provenance of the configuration value that would be returned for [key].
+     */
     fun provenance(key: Key<*>): Provenance
 }
 
