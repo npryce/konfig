@@ -49,7 +49,9 @@ data class Location(val description: String, val uri: URI? = null) {
 /**
  * Represents the location of a value looked up by a key.
  */
-data class PropertyLocation(val key: Key<*>, val source: Location, val nameInLocation: String)
+data class PropertyLocation(val key: Key<*>, val source: Location, val nameInLocation: String) {
+    val description: String get() = "$nameInLocation in ${source.description}"
+}
 
 
 /**
@@ -97,7 +99,7 @@ interface Configuration {
      * overridden if the [Configuration] searches in multiple sources.
      *
      */
-    open fun searchPath(key: Key<*>) = listOf(location(key))
+    open fun searchPath(key: Key<*>): List<PropertyLocation> = listOf(location(key))
 
 }
 
@@ -107,16 +109,15 @@ interface LocatedConfiguration : Configuration {
     override fun location(key: Key<*>) = PropertyLocation(key, location, key.name)
 }
 
+val List<PropertyLocation>.description: String
+    get() = map { " - ${it.description}" }.joinToString(separator = "\n", postfix = "\n")
 
 /**
  * The message used for the [Misconfiguration] exception thrown by [get] when there is no property defined
  * for [key].
  */
 fun Configuration.missingPropertyMessage(key: Key<*>) =
-        "${key.name} property not found; searched:\n    " +
-                searchPath(key)
-                        .map { "${it.nameInLocation} in ${it.source.description}" }
-                        .joinToString(separator = "\n    ", postfix = "\n")
+        "${key.name} property not found; searched:\n${searchPath(key).description}"
 
 /**
  * Configuration stored in a [Properties] object.

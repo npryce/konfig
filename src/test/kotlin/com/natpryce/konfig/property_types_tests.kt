@@ -14,14 +14,15 @@ private fun <T> assertParse(parser: (String,()-> PropertyLocation) -> T, vararg 
     }
 }
 
-fun <T> provenance(parser: (String,()-> PropertyLocation) -> T) =
+fun <T> location(parser: (String, ()-> PropertyLocation) -> T) =
         PropertyLocation(Key("passed-property-key",parser), Location("source-location"), "property-key-in-source")
+
 
 private inline fun <reified T> assertThrowsMisconfiguration(noinline parse: (String, ()-> PropertyLocation) -> T, vararg bad_inputs: String) {
     val propertyTypeName = T::class.simpleName!!
 
     for (bad_input in bad_inputs) {
-        assertThat(describe(bad_input), { parse(bad_input, {provenance(parse)}) },
+        assertThat(describe(bad_input), { parse(bad_input, { location(parse)}) },
                 throws<Misconfiguration>(has(Throwable::message, present(
                         containsSubstring(bad_input) and
                         containsSubstring(propertyTypeName) and

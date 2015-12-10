@@ -1,7 +1,9 @@
 package com.natpryce.konfig
 
 import com.natpryce.hamkrest.assertion.assertThat
+import com.natpryce.hamkrest.containsSubstring
 import com.natpryce.hamkrest.equalTo
+import com.natpryce.hamkrest.present
 import org.junit.Test
 import java.io.File
 import java.util.*
@@ -134,7 +136,36 @@ class OverridingAndFallingBack {
         assertThat(config.location(y), equalTo(defaults.location(y)))
         assertThat(config.location(z), equalTo(overrides.location(z)))
     }
+
+    @Test
+    fun search_path() {
+        for (k in listOf(x, y, z)) {
+            assertThat(config.searchPath(k), equalTo(listOf(overrides.location(k), defaults.location(k))))
+        }
+    }
+
+    @Test
+    fun missing_property_diagnostic_lists_both_searched_locations() {
+        val missing = Key("missing.property.name", stringType)
+
+        val e = expectThrown<Misconfiguration> { config.get(missing) }
+
+        assertThat(e.message, present(containsSubstring("missing.property.name in overrides")))
+        assertThat(e.message, present(containsSubstring("missing.property.name in defaults")))
+    }
 }
+
+inline fun <reified T : Exception> expectThrown(block: () -> Unit): T =
+        try {
+            block()
+            throw AssertionError("should have thrown ${T::class.simpleName}")
+        } catch (e: Exception) {
+            when (e) {
+                is T -> e
+                else -> throw e
+            }
+        }
+
 
 class ConfigSubset {
     val fullSet = ConfigurationMap(
