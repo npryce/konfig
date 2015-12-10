@@ -1,3 +1,10 @@
 #!/bin/sh -e
-version=${1:?version}
-git tag -u sw@natpryce.com ${version} -m "tagging version ${version}"
+version=$1
+
+if [ -z ${version} ]
+then
+    echo "ERROR no tag given; last tag:" `git tag -l | grep -E '[0-9]+(.[0-9]+){3}' | tail -1`
+    exit 1
+else
+    git tag -u sw@natpryce.com ${version} -m "tagging version ${version}"
+fi
