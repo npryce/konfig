@@ -24,7 +24,7 @@ class Misconfiguration(message: String, cause: Exception? = null) : Exception(me
  * val retryCount = config\[RETRY_COUNT\]
  * ~~~~~~~~
  */
-data class Key<out T>(val name: String, val parse: (String, () -> Provenance) -> T)
+data class Key<out T>(val name: String, val parse: (String, () -> PropertyLocation) -> T)
 
 
 /**
@@ -34,6 +34,7 @@ data class Key<out T>(val name: String, val parse: (String, () -> Provenance) ->
  */
 data class Location(val description: String, val uri: URI? = null) {
     constructor(file: File) : this(file.absolutePath, file.toURI())
+
     constructor(uri: URI) : this(uri.toString(), uri)
 
     companion object {
@@ -48,7 +49,7 @@ data class Location(val description: String, val uri: URI? = null) {
 /**
  * Represents the location of a value looked up by a key.
  */
-data class Provenance(val key: Key<*>, val source: Location, val nameInLocation: String)
+data class PropertyLocation(val key: Key<*>, val source: Location, val nameInLocation: String)
 
 
 /**
@@ -81,33 +82,47 @@ interface Configuration {
      */
     fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T = getOrNull(key) ?: default(key)
 
-    /**
-     * The message used for the [Misconfiguration] exception thrown by [get] when there is no property defined
-     * for [key].
-     */
-    open fun <T> missingPropertyMessage(key: Key<T>) = "${key.name} property not found"
-
-    open fun contains(key: Key<*>) = getOrNull(key) != null
+    fun contains(key: Key<*>) = getOrNull(key) != null
 
     /**
-     * Report the provenance of the configuration value that would be returned for [key].
+     * Report the location of the configuration value that would be returned for [key].
      */
-    fun provenance(key: Key<*>): Provenance
+    fun location(key: Key<*>): PropertyLocation
+
+    /**
+     * Report the locations that will be searched for a configuration property, in priority order.  The value used
+     * is taken from the first location in the list that contains a mapping for the key.
+     *
+     * The default implementation works for a [Configuration] that is loaded from single source, and must be
+     * overridden if the [Configuration] searches in multiple sources.
+     *
+     */
+    open fun searchPath(key: Key<*>) = listOf(location(key))
+
 }
 
 interface LocatedConfiguration : Configuration {
     val location: Location
 
-    override fun provenance(key: Key<*>): Provenance {
-        return Provenance(key, location, key.name)
-    }
+    override fun location(key: Key<*>) = PropertyLocation(key, location, key.name)
 }
+
+
+/**
+ * The message used for the [Misconfiguration] exception thrown by [get] when there is no property defined
+ * for [key].
+ */
+fun Configuration.missingPropertyMessage(key: Key<*>) =
+        "${key.name} property not found; searched:\n    " +
+                searchPath(key)
+                        .map { "${it.nameInLocation} in ${it.source.description}" }
+                        .joinToString(separator = "\n    ", postfix = "\n")
 
 /**
  * Configuration stored in a [Properties] object.
  */
 class ConfigurationProperties(private val properties: Properties, override val location: Location = Location.INTRINSIC) : LocatedConfiguration {
-    override fun <T> getOrNull(key: Key<T>) = properties.getProperty(key.name)?.let { stringValue -> key.parse(stringValue) { provenance(key) } }
+    override fun <T> getOrNull(key: Key<T>) = properties.getProperty(key.name)?.let { stringValue -> key.parse(stringValue) { location(key) } }
 
     override fun contains(key: Key<*>): Boolean {
         return properties.containsKeyRaw(key.name)
@@ -161,9 +176,9 @@ class ConfigurationMap(private val properties: Map<String, String>, override val
     /**
      * A convenience method for creating a [Configuration] as an inline expression.
      */
-    constructor(vararg entries: Pair<String, String>) : this(mapOf(*entries))
+    constructor(vararg entries: Pair<String, String>, location: Location = Location.INTRINSIC) : this(mapOf(*entries), location)
 
-    override fun <T> getOrNull(key: Key<T>) = properties[key.name]?.let { stringValue -> key.parse(stringValue) { provenance(key) } }
+    override fun <T> getOrNull(key: Key<T>) = properties[key.name]?.let { stringValue -> key.parse(stringValue) { location(key) } }
 
     override fun contains(key: Key<*>): Boolean {
         return key.name in properties
@@ -181,11 +196,9 @@ class ConfigurationMap(private val properties: Map<String, String>, override val
  *
  */
 class EnvironmentVariables(val prefix: String = "", private val lookup: (String) -> String? = System::getenv) : Configuration {
-    override fun <T> getOrNull(key: Key<T>) = lookup(toEnvironmentVariable(key))?.let { stringValue -> key.parse(stringValue) { provenance(key) } }
+    override fun <T> getOrNull(key: Key<T>) = lookup(toEnvironmentVariable(key))?.let { stringValue -> key.parse(stringValue) { location(key) } }
 
-    override fun provenance(key: Key<*>) = Provenance(key, Location("environment variables"), toEnvironmentVariable(key))
-
-    override fun <T> missingPropertyMessage(key: Key<T>) = "${toEnvironmentVariable(key)} environment variable not found"
+    override fun location(key: Key<*>) = PropertyLocation(key, Location("environment variables"), toEnvironmentVariable(key))
 
     private fun <T> toEnvironmentVariable(key: Key<T>) = prefix + key.name.toUpperCase().replace('.', '_')
 }
@@ -194,19 +207,18 @@ class EnvironmentVariables(val prefix: String = "", private val lookup: (String)
  * Looks up configuration in [override] and, if the property is not defined there, looks it up in [fallback].
  */
 class Override(val override: Configuration, val fallback: Configuration) : Configuration {
-    override fun provenance(key: Key<*>): Provenance {
+    override fun location(key: Key<*>): PropertyLocation {
         if (override.contains(key)) {
-            return override.provenance(key)
+            return override.location(key)
         } else {
-            return fallback.provenance(key)
+            return fallback.location(key)
         }
     }
 
+    override fun searchPath(key: Key<*>) = override.searchPath(key) + fallback.searchPath(key)
+
     override fun <T> getOrNull(key: Key<T>) =
             override.getOrNull(key) ?: fallback.getOrNull(key)
-
-    override fun <T> missingPropertyMessage(key: Key<T>) =
-            "${override.missingPropertyMessage(key)}, and ${fallback.missingPropertyMessage(key)}"
 }
 
 infix fun Configuration.overriding(defaults: Configuration) = Override(this, defaults)
@@ -226,10 +238,7 @@ class Subset(val namePrefix: String, private val configuration: Configuration) :
 
     override fun contains(key: Key<*>) = configuration.contains(prefixed(key))
 
-    override fun provenance(key: Key<*>) = configuration.provenance(prefixed(key))
-
-    override fun <T> missingPropertyMessage(key: Key<T>) =
-            configuration.missingPropertyMessage(prefixed(key))
+    override fun location(key: Key<*>) = configuration.location(prefixed(key))
 
     private fun <T> prefixed(key: Key<T>) = key.copy(name = namePrefix + "." + key.name)
 }

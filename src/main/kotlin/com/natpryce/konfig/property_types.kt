@@ -12,7 +12,7 @@ val stringType = propertyType<String, IllegalArgumentException>(String::toString
 /**
  * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
  */
-inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (String, () -> Provenance) -> T {
+inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (String, () -> PropertyLocation) -> T {
     return { s, provenanceSupplier ->
         try {
             parse(s)
@@ -64,6 +64,6 @@ val uriType = propertyType<URI, URISyntaxException>(::URI)
 
 private val defaultSeparator = Regex(",\\s*")
 
-fun <T> listType(elementType: (String, () -> Provenance) -> T, separator: Regex = defaultSeparator) = { s: String, p: () -> Provenance ->
+fun <T> listType(elementType: (String, () -> PropertyLocation) -> T, separator: Regex = defaultSeparator) = { s: String, p: () -> PropertyLocation ->
     s.split(separator).map { elementType(it, p) }
 }

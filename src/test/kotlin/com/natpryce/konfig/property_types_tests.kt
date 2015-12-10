@@ -6,7 +6,7 @@ import org.junit.Test
 import java.net.URI
 import kotlin.text.Regex
 
-private fun <T> assertParse(parser: (String,()->Provenance) -> T, vararg successful: Pair<String, T>) {
+private fun <T> assertParse(parser: (String,()-> PropertyLocation) -> T, vararg successful: Pair<String, T>) {
     for ((orig, expected) in successful) {
         val actual = parser(orig) { error("parse should succeed") }
 
@@ -14,10 +14,10 @@ private fun <T> assertParse(parser: (String,()->Provenance) -> T, vararg success
     }
 }
 
-fun <T> provenance(parser: (String,()->Provenance) -> T) =
-        Provenance(Key("passed-property-key",parser), Location("source-location"), "property-key-in-source")
+fun <T> provenance(parser: (String,()-> PropertyLocation) -> T) =
+        PropertyLocation(Key("passed-property-key",parser), Location("source-location"), "property-key-in-source")
 
-private inline fun <reified T> assertThrowsMisconfiguration(noinline parse: (String, ()->Provenance) -> T, vararg bad_inputs: String) {
+private inline fun <reified T> assertThrowsMisconfiguration(noinline parse: (String, ()-> PropertyLocation) -> T, vararg bad_inputs: String) {
     val propertyTypeName = T::class.simpleName!!
 
     for (bad_input in bad_inputs) {

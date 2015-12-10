@@ -95,7 +95,7 @@ class FromEnvironment {
     @Test
     fun environment_variables_can_be_prefixed() {
         val env = mapOf("XXX_NAME" to "alice")
-        val config = EnvironmentVariables(prefix="XXX_", lookup = { varname -> env[varname] })
+        val config = EnvironmentVariables(prefix = "XXX_", lookup = { varname -> env[varname] })
 
         val name = Key("name", stringType)
 
@@ -104,8 +104,8 @@ class FromEnvironment {
 }
 
 class OverridingAndFallingBack {
-    val defaults = ConfigurationMap("x" to "x", "y" to "y")
-    val overrides = ConfigurationMap("x" to "XX", "z" to "ZZ")
+    val overrides = ConfigurationMap("x" to "XX", "z" to "ZZ", location = Location("overrides"))
+    val defaults = ConfigurationMap("x" to "x", "y" to "y", location = Location("defaults"))
 
     val config = overrides overriding defaults
 
@@ -127,10 +127,22 @@ class OverridingAndFallingBack {
         assertTrue(config.contains(z))
         assertFalse(config.contains(Key("bob", stringType)))
     }
+
+    @Test
+    fun value_location() {
+        assertThat(config.location(x), equalTo(overrides.location(x)))
+        assertThat(config.location(y), equalTo(defaults.location(y)))
+        assertThat(config.location(z), equalTo(overrides.location(z)))
+    }
 }
 
 class ConfigSubset {
-    val fullSet = ConfigurationMap("a.one" to "a1", "a.two" to "a2", "b.one" to "b1", "b.two" to "b2", "b.three" to "b3")
+    val fullSet = ConfigurationMap(
+            "a.one" to "a1",
+            "a.two" to "a2",
+            "b.one" to "b1",
+            "b.two" to "b2",
+            "b.three" to "b3")
 
     val subsetA = Subset("a", fullSet)
     val subsetB = Subset("b", fullSet)
@@ -159,6 +171,12 @@ class ConfigSubset {
 
         assertFalse(subsetA.contains(key3))
         assertTrue(subsetB.contains(key3))
+    }
+
+    @Test
+    fun value_location() {
+        assertThat(subsetA.location(key1), equalTo(fullSet.location(Key("a.one", stringType))))
+        assertThat(subsetB.location(key2), equalTo(fullSet.location(Key("b.two", stringType))))
     }
 }
 
