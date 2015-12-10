@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 
 
 class FromProperties {
-    val config = ConfigurationProperties(Properties().apply {
+    val config = ConfigurationProperties(location= Location("location"), properties = Properties().apply {
         setProperty("name", "alice")
         setProperty("x", "1")
         setProperty("y", "2")
@@ -40,10 +40,22 @@ class FromProperties {
         assertTrue(config.contains(y))
         assertFalse(config.contains(Key("bob", stringType)))
     }
+
+    @Test
+    fun reports_entire_contents() {
+        val expectedPropertiesAsMap = mapOf(
+                "name" to "alice",
+                "x" to "1",
+                "y" to "2")
+
+        assertThat(config.list(), equalTo(listOf(config.location to expectedPropertiesAsMap)))
+    }
+
 }
 
 class FromMap {
-    val config = ConfigurationMap("name" to "alice", "x" to "1", "y" to "2")
+    val map = mapOf("name" to "alice", "x" to "1", "y" to "2")
+    val config = ConfigurationMap(map, Location("from-map"))
 
     val name = Key("name", stringType)
     val x = Key("x", intType)
@@ -67,13 +79,17 @@ class FromMap {
         assertFalse(config.contains(Key("bob", stringType)))
     }
 
+    @Test
+    fun reports_entire_contents() {
+        assertThat(config.list(), equalTo(listOf(config.location to map)))
+    }
 }
 
 class FromEnvironment {
     @Test
     fun translates_property_name_to_upper_case() {
         val env = mapOf("X" to "1", "Y" to "2")
-        val config = EnvironmentVariables(lookup = { varname -> env[varname] })
+        val config = EnvironmentVariables(lookup = { env[it] })
 
         val x = Key("x", intType)
         val y = Key("y", intType)
@@ -85,7 +101,7 @@ class FromEnvironment {
     @Test
     fun translates_dotted_property_name_to_upper_case_and_underscore() {
         val env = mapOf("NAME_FIRST" to "alice", "NAME_LAST" to "band")
-        val config = EnvironmentVariables(lookup = { varname -> env[varname] })
+        val config = EnvironmentVariables(lookup = { env[it] })
 
         val firstName = Key("name.first", stringType)
         val lastName = Key("name.last", stringType)
@@ -97,12 +113,30 @@ class FromEnvironment {
     @Test
     fun environment_variables_can_be_prefixed() {
         val env = mapOf("XXX_NAME" to "alice")
-        val config = EnvironmentVariables(prefix = "XXX_", lookup = { varname -> env[varname] })
+        val config = EnvironmentVariables(prefix = "XXX_", lookup = { env[it] })
 
         val name = Key("name", stringType)
 
         assertThat(config[name], equalTo("alice"))
     }
+
+    @Test
+    fun lists_only_those_variables_that_start_with_the_prefix() {
+        val env = mapOf("PREFIX_A" to "1", "PREFIX_B" to "2", "OTHER_C" to "3")
+        val config = EnvironmentVariables(prefix = "PREFIX_", lookup = { env[it] }, all = {env})
+
+        assertThat(config.list(), equalTo(listOf(config.location to mapOf("PREFIX_A" to "1", "PREFIX_B" to "2"))))
+    }
+
+    @Test
+    fun lists_all_variables_when_no_prefix() {
+        val env = mapOf("X" to "1", "Y" to "2")
+        val config = EnvironmentVariables(lookup = { env[it] }, all={env})
+
+        assertThat(config.list(), equalTo(listOf(config.location to env)))
+    }
+
+
 }
 
 class OverridingAndFallingBack {
@@ -152,6 +186,11 @@ class OverridingAndFallingBack {
 
         assertThat(e.message, present(containsSubstring("missing.property.name in overrides")))
         assertThat(e.message, present(containsSubstring("missing.property.name in defaults")))
+    }
+
+    @Test
+    fun lists_both_configurations_in_priority_order() {
+        assertThat(config.list(), equalTo(overrides.list() + defaults.list()))
     }
 }
 
@@ -208,6 +247,11 @@ class ConfigSubset {
     fun value_location() {
         assertThat(subsetA.location(key1), equalTo(fullSet.location(Key("a.one", stringType))))
         assertThat(subsetB.location(key2), equalTo(fullSet.location(Key("b.two", stringType))))
+    }
+
+    @Test
+    fun lists_only_those_variables_that_start_with_the_prefix() {
+        assertThat(subsetA.list(), equalTo(listOf(fullSet.location to mapOf("a.one" to "a1", "a.two" to "a2"))))
     }
 }
 

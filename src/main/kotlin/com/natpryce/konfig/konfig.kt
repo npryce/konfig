@@ -101,6 +101,8 @@ interface Configuration {
      */
     open fun searchPath(key: Key<*>): List<PropertyLocation> = listOf(location(key))
 
+    fun list(): List<Pair<Location, Map<String, String>>>
+
 }
 
 interface LocatedConfiguration : Configuration {
@@ -167,6 +169,10 @@ class ConfigurationProperties(private val properties: Properties, override val l
                     ConfigurationProperties(Properties().apply { load(input) }, location)
                 }
     }
+
+    override fun list(): List<Pair<Location,Map<String, String>>> {
+        return listOf(location to properties.stringPropertyNames().toMap({it}, {properties.getProperty(it)}))
+    }
 }
 
 
@@ -184,6 +190,10 @@ class ConfigurationMap(private val properties: Map<String, String>, override val
     override fun contains(key: Key<*>): Boolean {
         return key.name in properties
     }
+
+    override fun list(): List<Pair<Location, Map<String, String>>> {
+        return listOf(location to properties)
+    }
 }
 
 /**
@@ -196,10 +206,23 @@ class ConfigurationMap(private val properties: Map<String, String>, override val
  * translated to "APP_DB_PASSWORD".
  *
  */
-class EnvironmentVariables(val prefix: String = "", private val lookup: (String) -> String? = System::getenv) : Configuration {
-    override fun <T> getOrNull(key: Key<T>) = lookup(toEnvironmentVariable(key))?.let { stringValue -> key.parse(stringValue) { location(key) } }
+class EnvironmentVariables(val prefix: String = "",
+                           private val lookup: (String) -> String? = System::getenv,
+                           private val all: ()->Map<String,String> = System::getenv)
+    : LocatedConfiguration
+{
+    override val location = Location("environment variables")
 
-    override fun location(key: Key<*>) = PropertyLocation(key, Location("environment variables"), toEnvironmentVariable(key))
+    override fun <T> getOrNull(key: Key<T>) = lookup(toEnvironmentVariable(key))?.let {
+        stringValue -> key.parse(stringValue) { location(key) }
+    }
+
+    override fun location(key: Key<*>): PropertyLocation {
+        return PropertyLocation(key, location, toEnvironmentVariable(key))
+    }
+
+    override fun list(): List<Pair<Location, Map<String, String>>> =
+            listOf(location to all().filterKeys { it.startsWith(prefix) })
 
     private fun <T> toEnvironmentVariable(key: Key<T>) = prefix + key.name.toUpperCase().replace('.', '_')
 }
@@ -220,6 +243,10 @@ class Override(val override: Configuration, val fallback: Configuration) : Confi
 
     override fun <T> getOrNull(key: Key<T>) =
             override.getOrNull(key) ?: fallback.getOrNull(key)
+
+    override fun list(): List<Pair<Location, Map<String, String>>> {
+        return override.list() + fallback.list()
+    }
 }
 
 infix fun Configuration.overriding(defaults: Configuration) = Override(this, defaults)
@@ -233,7 +260,9 @@ infix fun Configuration.overriding(defaults: Configuration) = Override(this, def
  * For example, if initialised with a [namePrefix] of "db", a look up with a key named "password" would be
  * delegated to [configuration] as a look up for "db.password".
  */
-class Subset(val namePrefix: String, private val configuration: Configuration) : Configuration {
+class Subset(namePrefix: String, private val configuration: Configuration) : Configuration {
+    private val prefix = namePrefix + "."
+
     override fun <T> getOrNull(key: Key<T>) =
             configuration.getOrNull(prefixed(key))
 
@@ -241,5 +270,7 @@ class Subset(val namePrefix: String, private val configuration: Configuration) :
 
     override fun location(key: Key<*>) = configuration.location(prefixed(key))
 
-    private fun <T> prefixed(key: Key<T>) = key.copy(name = namePrefix + "." + key.name)
+    override fun list() = configuration.list().map { it.first to it.second.filterKeys{ k -> k.startsWith(prefix) } }
+
+    private fun <T> prefixed(key: Key<T>) = key.copy(name = prefix + key.name)
 }
