@@ -11,7 +11,7 @@ data class CommandLineOption(
 }
 
 
-fun parseArgs(args: Array<String>, vararg defs: CommandLineOption, defaults: Configuration? = null): Pair<Configuration, List<String>> {
+fun parseArgs(args: Array<String>, vararg defs: CommandLineOption): Pair<Configuration, List<String>> {
     val files = ArrayList<String>()
     val properties = HashMap<String, String>()
     val shortOpts = defs.filter { it.short != null }.toMap({ it.short!! }, { it.configName })
@@ -51,5 +51,7 @@ fun parseArgs(args: Array<String>, vararg defs: CommandLineOption, defaults: Con
         i++
     }
 
-    return Pair(ConfigurationMap(properties, Location("command-line arguments")) overriding defaults, files)
+    return Pair(ConfigurationMap(properties, Location("command-line arguments")), files)
 }
+
+infix fun Pair<Configuration, List<String>>.overriding(defaults: Configuration) = copy(first = first overriding defaults)
