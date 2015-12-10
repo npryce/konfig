@@ -6,15 +6,14 @@ import java.util.*
 data class CommandLineOption(
         val configKey: Key<*>,
         val long: String = configKey.name.replace('.', '-'),
-        val short: String? = null)
-{
+        val short: String? = null) {
     val configName: String get() = configKey.name
 }
 
 
-fun parseArgs(args: Array<String>, vararg defs: CommandLineOption): Pair<Configuration, List<String>> {
+fun parseArgs(args: Array<String>, vararg defs: CommandLineOption, defaults: Configuration? = null): Pair<Configuration, List<String>> {
     val files = ArrayList<String>()
-    val config = HashMap<String, String>()
+    val properties = HashMap<String, String>()
     val shortOpts = defs.filter { it.short != null }.toMap({ it.short!! }, { it.configName })
     val longOpts = defs.toMap({ it.long }, { it.configName })
 
@@ -29,14 +28,14 @@ fun parseArgs(args: Array<String>, vararg defs: CommandLineOption): Pair<Configu
             i++
             if (i >= args.size) throw Misconfiguration("no argument for $arg command-line option")
 
-            config[configNameFor(configNameByOpt, opt)] = args[i]
+            properties[configNameFor(configNameByOpt, opt)] = args[i]
         }
 
         when {
             arg.startsWith("--") -> {
                 val bareOpt = arg.substring(2)
                 if (bareOpt.contains('=')) {
-                    config[configNameFor(longOpts, bareOpt.substringBefore('='))] = bareOpt.substringAfter('=')
+                    properties[configNameFor(longOpts, bareOpt.substringBefore('='))] = bareOpt.substringAfter('=')
                 } else {
                     storeNextArg(longOpts, bareOpt)
                 }
@@ -52,6 +51,5 @@ fun parseArgs(args: Array<String>, vararg defs: CommandLineOption): Pair<Configu
         i++
     }
 
-    return Pair(ConfigurationMap(config, Location("command-line arguments")), files)
+    return Pair(ConfigurationMap(properties, Location("command-line arguments")) overriding defaults, files)
 }
-

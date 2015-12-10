@@ -249,7 +249,8 @@ class Override(val override: Configuration, val fallback: Configuration) : Confi
     }
 }
 
-infix fun Configuration.overriding(defaults: Configuration) = Override(this, defaults)
+infix fun Configuration.overriding(defaults: Configuration?) =
+        if (defaults == null) this else Override(this, defaults)
 
 /**
  * Represents a subset of a larger set of configuration properties.

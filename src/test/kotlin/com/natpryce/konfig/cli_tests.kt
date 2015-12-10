@@ -8,6 +8,7 @@ import org.junit.Test
 
 class CommandLineParsing {
     val optX = Key("opt.x", stringType)
+    val optY = Key("opt.y", stringType)
 
     @Test
     fun no_options() {
@@ -55,4 +56,14 @@ class CommandLineParsing {
                 throws<Misconfiguration>())
     }
 
+    @Test
+    fun defaults() {
+        val (config, args) = parseArgs(arrayOf("--opt-x=cli-x"),
+                CommandLineOption(optX),
+                CommandLineOption(optY),
+                defaults=ConfigurationMap("opt.x" to "default-x", "opt.y" to "default-y"))
+
+        assertThat(config[optX], equalTo("cli-x"))
+        assertThat(config[optY], equalTo("default-y"))
+    }
 }
