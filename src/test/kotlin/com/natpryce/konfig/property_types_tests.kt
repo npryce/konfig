@@ -6,18 +6,27 @@ import org.junit.Test
 import java.net.URI
 import kotlin.text.Regex
 
-private fun <T> assertParse(parser: (String) -> T, vararg successful: Pair<String, T>) {
-    for ((orig, parsed) in successful) {
-        assertThat(orig, parser(orig), equalTo(parsed))
-    }
+private fun <T> assertParse(parser: (String,()->Provenance) -> T, vararg successful: Pair<String, T>) {
+    for ((orig, expected) in successful) {
+        val actual = parser(orig) { error("parse should succeed") }
 
+        assertThat(describe(orig), actual, equalTo(expected))
+    }
 }
 
-private inline fun <reified T> assertThrowsMisconfiguration(crossinline parser: (String) -> T, vararg bad_inputs: String) {
+fun <T> provenance(parser: (String,()->Provenance) -> T) =
+        Provenance(Key("passed-property-key",parser), Location("source-location"), "property-key-in-source")
+
+private inline fun <reified T> assertThrowsMisconfiguration(noinline parse: (String, ()->Provenance) -> T, vararg bad_inputs: String) {
+    val propertyTypeName = T::class.simpleName!!
+
     for (bad_input in bad_inputs) {
-        assertThat(describe(bad_input), { parser(bad_input) },
+        assertThat(describe(bad_input), { parse(bad_input, {provenance(parse)}) },
                 throws<Misconfiguration>(has(Throwable::message, present(
-                        containsSubstring(bad_input) and containsSubstring(T::class.simpleName!!)
+                        containsSubstring(bad_input) and
+                        containsSubstring(propertyTypeName) and
+                        containsSubstring("property-key-in-source") and
+                        containsSubstring("source-location")
                 ))))
     }
 }

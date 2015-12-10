@@ -1,24 +1,29 @@
 package com.natpryce.konfig
 
-import java.net.URISyntaxException
 import java.net.URI
+import java.net.URISyntaxException
 import kotlin.text.Regex
 
 /**
  * A parser for string properties (the identity function)
  */
-val stringType = String::toString
+val stringType = propertyType<String, IllegalArgumentException>(String::toString)
 
 /**
  * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
  */
-inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (String) -> T {
-    return { s ->
+inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (String, () -> Provenance) -> T {
+    return { s, provenanceSupplier ->
         try {
             parse(s)
         } catch (e: Exception) {
             when (e) {
-                is X -> throw Misconfiguration("invalid ${T::class.simpleName ?: "value"}: $s", e)
+                is X -> {
+                    val p = provenanceSupplier()
+                    val typeName = T::class.simpleName ?: "value"
+
+                    throw Misconfiguration("${p.source.description} ${p.nameInLocation} - invalid $typeName: $s", e)
+                }
                 else -> throw e
             }
         }
@@ -28,7 +33,7 @@ inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (S
 /**
  * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
  */
-inline fun <reified T> numericPropertyType(crossinline parse: (String) -> T) =
+inline fun <reified T> numericPropertyType(noinline parse: (String) -> T) =
         propertyType<T, NumberFormatException>(parse)
 
 /**
@@ -49,7 +54,7 @@ val doubleType = numericPropertyType(String::toDouble)
 /**
  * The type of Boolean properties
  */
-val booleanType = String::toBoolean
+val booleanType = propertyType<Boolean, IllegalArgumentException>(String::toBoolean)
 
 /**
  * The type of URI properties
@@ -59,6 +64,6 @@ val uriType = propertyType<URI, URISyntaxException>(::URI)
 
 private val defaultSeparator = Regex(",\\s*")
 
-fun <T> listType(elementType: (String) -> T, separator: Regex = defaultSeparator): (String) -> List<T> = { s ->
-    s.split(separator).map(elementType)
+fun <T> listType(elementType: (String, () -> Provenance) -> T, separator: Regex = defaultSeparator) = { s: String, p: () -> Provenance ->
+    s.split(separator).map { elementType(it, p) }
 }

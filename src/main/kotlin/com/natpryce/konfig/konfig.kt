@@ -2,6 +2,8 @@ package com.natpryce.konfig
 
 import java.io.File
 import java.io.InputStream
+import java.net.URI
+import java.net.URL
 import java.util.*
 
 /**
@@ -22,7 +24,21 @@ class Misconfiguration(message: String, cause: Exception? = null) : Exception(me
  * val retryCount = config\[RETRY_COUNT\]
  * ~~~~~~~~
  */
-data class Key<out T>(val name: String, val parse: (String) -> T)
+data class Key<out T>(val name: String, val parse: (String, () -> Provenance) -> T)
+
+
+data class Location(val description: String, val uri: URI? = null) {
+    constructor(file: File) : this(file.absolutePath, file.toURI())
+
+    constructor(uri: URI) : this(uri.toString(), uri)
+
+    companion object {
+        val INTRINSIC = Location("intrinsic")
+    }
+}
+
+
+data class Provenance(val key: Key<*>, val source: Location, val nameInLocation: String)
 
 
 /**
@@ -60,47 +76,66 @@ interface Configuration {
      * for [key].
      */
     open fun <T> missingPropertyMessage(key: Key<T>) = "${key.name} property not found"
+
+    open fun contains(key: Key<*>) = getOrNull(key) != null
+
+    fun provenance(key: Key<*>): Provenance
+}
+
+interface LocatedConfiguration : Configuration {
+    val location: Location
+
+    override fun provenance(key: Key<*>): Provenance {
+        return Provenance(key, location, key.name)
+    }
 }
 
 /**
  * Configuration stored in a [Properties] object.
  */
-class ConfigurationProperties(private val properties: Properties) : Configuration {
-    override fun <T> getOrNull(key: Key<T>) = properties.getProperty(key.name)?.let(key.parse)
+class ConfigurationProperties(private val properties: Properties, override val location: Location = Location.INTRINSIC) : LocatedConfiguration {
+    override fun <T> getOrNull(key: Key<T>) = properties.getProperty(key.name)?.let { stringValue -> key.parse(stringValue) { provenance(key) } }
+
+    override fun contains(key: Key<*>): Boolean {
+        return properties.containsKeyRaw(key.name)
+    }
 
     companion object {
         /**
          * Returns the system properties as a Config object.
          */
-        fun systemProperties() = ConfigurationProperties(System.getProperties())
+        fun systemProperties() = ConfigurationProperties(System.getProperties(), Location("system properties"))
 
         /**
          * Load from resources relative to a class
          */
         fun fromResource(relativeToClass: Class<*>, resourceName: String) =
-                load(relativeToClass.getResourceAsStream(resourceName)) {
-                    "resource $resourceName not found"
-                }
+                loadFromResource(resourceName, relativeToClass.getResource(resourceName))
 
         /**
-         * Load from resource within the same classloader that loaded the Konfig library (probably the
-         * system classloader)
+         * Load from resource within the system classloader.
          */
-        fun fromResource(resourceName: String) =
-                load(ConfigurationProperties::class.java.classLoader.getResourceAsStream(resourceName)) {
-                    "resource $resourceName not found"
-                }
+        fun fromResource(resourceName: String): ConfigurationProperties {
+            val classLoader = ClassLoader.getSystemClassLoader()
+            return loadFromResource(resourceName, classLoader.getResource(resourceName))
+        }
+
+        private fun loadFromResource(resourceName: String, resourceUrl: URL?): ConfigurationProperties {
+            return load(resourceUrl?.openStream(), Location("resource $resourceName", resourceUrl?.toURI())) {
+                "resource $resourceName not found"
+            }
+        }
 
         /**
          * Load from file
          */
-        fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null) {
+        fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null, Location(file.absolutePath, file.toURI())) {
             "file $file does not exist"
         }
 
-        private fun load(input: InputStream?, errorMessageFn: () -> String) =
+        private fun load(input: InputStream?, location: Location, errorMessageFn: () -> String) =
                 (input ?: throw Misconfiguration(errorMessageFn())).use {
-                    ConfigurationProperties(Properties().apply { load(input) })
+                    ConfigurationProperties(Properties().apply { load(input) }, location)
                 }
     }
 }
@@ -109,13 +144,17 @@ class ConfigurationProperties(private val properties: Properties) : Configuratio
 /**
  * Configuration stored in a map.
  */
-class ConfigurationMap(private val properties: Map<String, String>) : Configuration {
+class ConfigurationMap(private val properties: Map<String, String>, override val location: Location = Location.INTRINSIC) : LocatedConfiguration {
     /**
      * A convenience method for creating a [Configuration] as an inline expression.
      */
     constructor(vararg entries: Pair<String, String>) : this(mapOf(*entries))
 
-    override fun <T> getOrNull(key: Key<T>) = properties[key.name]?.let(key.parse)
+    override fun <T> getOrNull(key: Key<T>) = properties[key.name]?.let { stringValue -> key.parse(stringValue) { provenance(key) } }
+
+    override fun contains(key: Key<*>): Boolean {
+        return key.name in properties
+    }
 }
 
 /**
@@ -129,7 +168,9 @@ class ConfigurationMap(private val properties: Map<String, String>) : Configurat
  *
  */
 class EnvironmentVariables(val prefix: String = "", private val lookup: (String) -> String? = System::getenv) : Configuration {
-    override fun <T> getOrNull(key: Key<T>) = lookup(toEnvironmentVariable(key))?.let(key.parse)
+    override fun <T> getOrNull(key: Key<T>) = lookup(toEnvironmentVariable(key))?.let { stringValue -> key.parse(stringValue) { provenance(key) } }
+
+    override fun provenance(key: Key<*>) = Provenance(key, Location("environment variables"), toEnvironmentVariable(key))
 
     override fun <T> missingPropertyMessage(key: Key<T>) = "${toEnvironmentVariable(key)} environment variable not found"
 
@@ -140,6 +181,14 @@ class EnvironmentVariables(val prefix: String = "", private val lookup: (String)
  * Looks up configuration in [override] and, if the property is not defined there, looks it up in [fallback].
  */
 class Override(val override: Configuration, val fallback: Configuration) : Configuration {
+    override fun provenance(key: Key<*>): Provenance {
+        if (override.contains(key)) {
+            return override.provenance(key)
+        } else {
+            return fallback.provenance(key)
+        }
+    }
+
     override fun <T> getOrNull(key: Key<T>) =
             override.getOrNull(key) ?: fallback.getOrNull(key)
 
@@ -161,6 +210,10 @@ infix fun Configuration.overriding(defaults: Configuration) = Override(this, def
 class Subset(val namePrefix: String, private val configuration: Configuration) : Configuration {
     override fun <T> getOrNull(key: Key<T>) =
             configuration.getOrNull(prefixed(key))
+
+    override fun contains(key: Key<*>) = configuration.contains(prefixed(key))
+
+    override fun provenance(key: Key<*>) = configuration.provenance(prefixed(key))
 
     override fun <T> missingPropertyMessage(key: Key<T>) =
             configuration.missingPropertyMessage(prefixed(key))

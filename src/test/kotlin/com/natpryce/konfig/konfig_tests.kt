@@ -5,6 +5,8 @@ import com.natpryce.hamkrest.equalTo
 import org.junit.Test
 import java.io.File
 import java.util.*
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 
 class FromProperties {
@@ -14,7 +16,7 @@ class FromProperties {
         setProperty("y", "2")
     })
 
-    val name = Key("name") { it }
+    val name = Key("name", stringType)
     val x = Key("x", intType)
     val y = Key("y", intType)
 
@@ -27,6 +29,14 @@ class FromProperties {
     fun looks_up_int_properties() {
         assertThat(config[x], equalTo(1))
         assertThat(config[y], equalTo(2))
+    }
+
+    @Test
+    fun contains() {
+        assertTrue(config.contains(name))
+        assertTrue(config.contains(x))
+        assertTrue(config.contains(y))
+        assertFalse(config.contains(Key("bob", stringType)))
     }
 }
 
@@ -46,6 +56,13 @@ class FromMap {
     fun looks_up_int_properties() {
         assertThat(config[x], equalTo(1))
         assertThat(config[y], equalTo(2))
+    }
+
+    @Test
+    fun contains() {
+        assertTrue(config.contains(x))
+        assertTrue(config.contains(y))
+        assertFalse(config.contains(Key("bob", stringType)))
     }
 
 }
@@ -87,35 +104,61 @@ class FromEnvironment {
 }
 
 class OverridingAndFallingBack {
+    val defaults = ConfigurationMap("x" to "x", "y" to "y")
+    val overrides = ConfigurationMap("x" to "XX", "z" to "ZZ")
+
+    val config = overrides overriding defaults
+
+    val x = Key("x", stringType)
+    val y = Key("y", stringType)
+    val z = Key("z", stringType)
+
     @Test
     fun overrides_default_properties() {
-        val defaults = ConfigurationMap("x" to "x", "y" to "y")
-        val overrides = ConfigurationMap("x" to "XX", "z" to "ZZ")
+        assertThat(config[x], equalTo("XX"))
+        assertThat(config[y], equalTo("y"))
+        assertThat(config[z], equalTo("ZZ"))
+    }
 
-        val config = overrides overriding defaults
-
-        assertThat(config[Key("x", stringType)], equalTo("XX"))
-        assertThat(config[Key("y", stringType)], equalTo("y"))
-        assertThat(config[Key("z", stringType)], equalTo("ZZ"))
+    @Test
+    fun contains() {
+        assertTrue(config.contains(x))
+        assertTrue(config.contains(y))
+        assertTrue(config.contains(z))
+        assertFalse(config.contains(Key("bob", stringType)))
     }
 }
 
 class ConfigSubset {
+    val fullSet = ConfigurationMap("a.one" to "a1", "a.two" to "a2", "b.one" to "b1", "b.two" to "b2", "b.three" to "b3")
+
+    val subsetA = Subset("a", fullSet)
+    val subsetB = Subset("b", fullSet)
+
+    val key1 = Key("one", stringType)
+    val key2 = Key("two", stringType)
+    val key3 = Key("three", stringType)
+
+
     @Test
     fun subset_properties() {
-        val original = ConfigurationMap("a.one" to "a1", "a.two" to "a2", "b.one" to "b1", "b.two" to "b2")
+        assertThat(subsetA[key1], equalTo("a1"))
+        assertThat(subsetA[key2], equalTo("a2"))
 
-        val configA = Subset("a", original)
-        val configB = Subset("b", original)
+        assertThat(subsetB[key1], equalTo("b1"))
+        assertThat(subsetB[key2], equalTo("b2"))
+    }
 
-        val key1 = Key("one", stringType)
-        val key2 = Key("two", stringType)
+    @Test
+    fun contains() {
+        assertTrue(fullSet.contains(Key("a.one", stringType)))
+        assertTrue(fullSet.contains(Key("b.one", stringType)))
 
-        assertThat(configA[key1], equalTo("a1"))
-        assertThat(configA[key2], equalTo("a2"))
+        assertTrue(subsetA.contains(key1))
+        assertTrue(subsetB.contains(key2))
 
-        assertThat(configB[key1], equalTo("b1"))
-        assertThat(configB[key2], equalTo("b2"))
+        assertFalse(subsetA.contains(key3))
+        assertTrue(subsetB.contains(key3))
     }
 }
 

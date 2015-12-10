@@ -52,6 +52,6 @@ fun parseArgs(args: Array<String>, vararg defs: CommandLineOption): Pair<Configu
         i++
     }
 
-    return Pair(ConfigurationMap(config), files)
+    return Pair(ConfigurationMap(config, Location("command-line arguments")), files)
 }
 
