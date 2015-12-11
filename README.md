@@ -1,5 +1,9 @@
 # Konfig - A Type Safe Configuration API for Kotlin
 
+[![Build Status](https://travis-ci.org/npryce/konfig.svg?branch=master)](https://travis-ci.org/npryce/konfig)
+
+To get started, import `com.natpryce.konfig.*` and then:
+
 1. define typed property keys
 
         val HTTP_PORT = Key("http.port", intType)
