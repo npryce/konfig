@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/npryce/konfig.svg?branch=master)](https://travis-ci.org/npryce/konfig)
 
-To get started, import `com.natpryce.konfig.*` and then:
+To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com.natpryce.konfig.*` and then:
 
 1. define typed property keys
 
