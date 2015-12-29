@@ -128,7 +128,7 @@ class ConfigurationProperties(private val properties: Properties, override val l
     override fun <T> getOrNull(key: Key<T>) = properties.getProperty(key.name)?.let { stringValue -> key.parse(stringValue) { location(key) } }
 
     override fun contains(key: Key<*>): Boolean {
-        return properties.containsKeyRaw(key.name)
+        return properties.getProperty(key.name) != null
     }
 
     companion object {
@@ -171,7 +171,7 @@ class ConfigurationProperties(private val properties: Properties, override val l
     }
 
     override fun list(): List<Pair<Location,Map<String, String>>> {
-        return listOf(location to properties.stringPropertyNames().toMap({it}, {properties.getProperty(it)}))
+        return listOf(location to properties.stringPropertyNames().toMapBy({ it }, { properties.getProperty(it) }))
     }
 }
 

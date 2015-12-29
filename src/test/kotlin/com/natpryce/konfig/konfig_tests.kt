@@ -182,7 +182,7 @@ class OverridingAndFallingBack {
     fun missing_property_diagnostic_lists_both_searched_locations() {
         val missing = Key("missing.property.name", stringType)
 
-        val e = expectThrown<Misconfiguration> { config.get(missing) }
+        val e = expectThrown<Misconfiguration> { config[missing] }
 
         assertThat(e.message, present(containsSubstring("missing.property.name in overrides")))
         assertThat(e.message, present(containsSubstring("missing.property.name in defaults")))
