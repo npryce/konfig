@@ -84,4 +84,16 @@ class CommandLineParsing {
         assertThat(config.location(optX).nameInLocation, equalTo("--opt-x"))
         assertThat(config.location(optY).nameInLocation, equalTo("-y"))
     }
+
+    @Test
+    fun lists_options_set_from_command_line() {
+        val (config) = parseArgs(arrayOf("--opt-x=10", "-y", "20"),
+                CommandLineOption(optX),
+                CommandLineOption(optY, short = "y"))
+
+        assertThat(config.list().single().second, equalTo(mapOf(
+                "--opt-x" to "10",
+                "-y" to "20"
+        )))
+    }
 }
