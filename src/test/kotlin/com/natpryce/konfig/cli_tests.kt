@@ -1,9 +1,12 @@
 package com.natpryce.konfig
 
 import com.natpryce.hamkrest.assertion.assertThat
+import com.natpryce.hamkrest.containsSubstring
 import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.throws
+import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.io.ByteArrayOutputStream
 
 
 class CommandLineParsing {
@@ -95,5 +98,70 @@ class CommandLineParsing {
                 "--opt-x" to "10",
                 "-y" to "20"
         )))
+    }
+
+    private class Help : Exception()
+
+    @Test
+    fun reports_usage_if_passed_long_help_option() {
+        val helpOutputBytes = ByteArrayOutputStream()
+
+        expectThrown<Help> {
+            parseArgs(arrayOf("--opt-x=10", "-y", "20", "--help"),
+                    CommandLineOption(optX),
+                    CommandLineOption(optY, short = "y"),
+                    helpOutput = helpOutputBytes,
+                    helpExit = { throw Help() })
+        }
+
+        assertEquals(
+"""Usage: <program> [options] FILE ...
+
+Options:
+  --opt-x=OPT-X            set opt x
+  -y OPT-Y, --opt-y=OPT-Y  set opt y
+  -h, --help               show this help message and exit
+""", helpOutputBytes.toString())
+
+    }
+
+    @Test
+    fun reports_usage_if_passed_short_help_option() {
+        val helpOutputBytes = ByteArrayOutputStream()
+
+        expectThrown<Help> {
+            parseArgs(arrayOf("-h"),
+                    CommandLineOption(optX),
+                    helpOutput = helpOutputBytes,
+                    helpExit = { throw Help() })
+        }
+    }
+
+    @Test
+    fun can_specify_description_of_command_line_option() {
+        val helpOutputBytes = ByteArrayOutputStream()
+
+        expectThrown<Help> {
+            parseArgs(arrayOf("--help"),
+                    CommandLineOption(optX, description = "a descriptive description"),
+                    helpOutput = helpOutputBytes,
+                    helpExit = { throw Help() })
+        }
+
+        assertThat(helpOutputBytes.toString(), containsSubstring(" --opt-x=OPT-X  a descriptive description\n"))
+    }
+
+    @Test
+    fun can_specify_metavar_of_command_line_option() {
+        val helpOutputBytes = ByteArrayOutputStream()
+
+        expectThrown<Help> {
+            parseArgs(arrayOf("--help"),
+                    CommandLineOption(optX, short="x", metavar = "THE_X", description = "set the x"),
+                    helpOutput = helpOutputBytes,
+                    helpExit = { throw Help() })
+        }
+
+        assertThat(helpOutputBytes.toString(), containsSubstring(" -x THE_X, --opt-x=THE_X  set the x\n"))
     }
 }
