@@ -3,6 +3,7 @@ package com.natpryce.konfig
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.containsSubstring
 import com.natpryce.hamkrest.equalTo
+import com.natpryce.hamkrest.present
 import com.natpryce.hamkrest.throws
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -79,13 +80,13 @@ class CommandLineParsing {
     }
 
     @Test
-    fun reports_location_as_the_option_used_on_the_command_line() {
+    fun reports_location_as_the_long_option() {
         val (config) = parseArgs(arrayOf("--opt-x=10", "-y", "20"),
                 CommandLineOption(optX),
                 CommandLineOption(optY, short = "y"))
 
         assertThat(config.location(optX).nameInLocation, equalTo("--opt-x"))
-        assertThat(config.location(optY).nameInLocation, equalTo("-y"))
+        assertThat(config.location(optY).nameInLocation, equalTo("--opt-y"))
     }
 
     @Test
@@ -163,5 +164,43 @@ Options:
         }
 
         assertThat(helpOutputBytes.toString(), containsSubstring(" -x THE_X, --opt-x=THE_X  set the x\n"))
+    }
+
+    @Test
+    fun reports_searched_location_when_property_not_defined() {
+        val (config) = parseArgs(emptyArray(),
+                CommandLineOption(optX, long="xxx", short="y"))
+
+        try {
+            config[optX]
+        }
+        catch (expected: Misconfiguration) {
+            assertThat(expected.message, present(containsSubstring("--xxx")))
+            assertThat(expected.message, present(containsSubstring("-y")))
+        }
+    }
+
+    @Test
+    fun reports_searched_location_when_only_long_option() {
+        val (config) = parseArgs(emptyArray(),
+                CommandLineOption(optX))
+
+        assertThat(config.searchPath(optX).map { it.nameInLocation }, equalTo(listOf("--opt-x")))
+    }
+
+    @Test
+    fun reports_searched_location_when_long_and_short_option() {
+        val (config) = parseArgs(emptyArray(),
+                CommandLineOption(optX, short="x"))
+
+        assertThat(config.searchPath(optX).map { it.nameInLocation }, equalTo(listOf("-x", "--opt-x")))
+    }
+
+    @Test
+    fun reports_searched_location_when_custom_long_and_short_option() {
+        val (config) = parseArgs(emptyArray(),
+                CommandLineOption(optX, long="the-x", short="x"))
+
+        assertThat(config.searchPath(optX).map { it.nameInLocation }, equalTo(listOf("-x", "--the-x")))
     }
 }

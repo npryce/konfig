@@ -4,31 +4,61 @@ import java.io.OutputStream
 import java.io.PrintWriter
 import java.util.*
 
-
 data class CommandLineOption(
         val configKey: Key<*>,
         val long: String = configKey.name.replace('.', '-'),
         val short: String? = null,
         val description: String = "set ${configKey.name.replace(".", " ")}",
-        val metavar: String = long.toUpperCase()) {
-    val configName: String get() = configKey.name
+        val metavar: String = long.toUpperCase())
+{
+    init {
+        if (long.startsWith("-")) throw IllegalArgumentException("long flag must not be specified with leading '-'")
+        if (short != null && short.startsWith("-")) throw IllegalArgumentException("short flag must not be specified with leading '-'")
+    }
+
+    val longFlag = "--$long"
+    val shortFlag = if (short == null) null else "-$short"
 }
+
 
 private data class CommandLineProperty(val flagUsed: String, val value: String)
 
-private class CommandLineConfiguration(private val options: Map<String, CommandLineProperty>) :
-        Configuration {
+
+private class CommandLineConfiguration(allOptions: List<CommandLineOption>,
+                                       private val optionsUsed: Map<Key<*>, CommandLineProperty>) : Configuration
+{
+    private val optionsByKey = allOptions.toMapBy { it.configKey }
     private val location: Location = Location("command-line parameters")
 
-    override fun <T> getOrNull(key: Key<T>): T? =
-            options[key.name]?.value?.let { stringValue -> key.parse(stringValue) { location(key) } }
+    override fun <T> getOrNull(key: Key<T>): T? {
+        val optionUsed = optionsUsed[key]
+        return if (optionUsed == null) {
+            null
+        } else {
+            key.parse(optionUsed.value) { PropertyLocation(key, location, optionUsed.flagUsed) }
+        }
+    }
 
-    override fun location(key: Key<*>): PropertyLocation {
-        return PropertyLocation(key, location, options[key.name]?.flagUsed ?: throw IllegalArgumentException("property not defined"))
+    override fun location(key: Key<*>) = PropertyLocation(key, location,
+            optionsByKey[key]?.longFlag ?: throw IllegalArgumentException("no command-line option defined for key ${key.name}"))
+
+    override fun searchPath(key: Key<*>): List<PropertyLocation> {
+        val opt = optionsByKey[key]
+
+        val result = ArrayList<PropertyLocation>()
+
+        if (opt != null) {
+            if (opt.shortFlag != null) {
+                result.add(PropertyLocation(key, location, opt.shortFlag))
+            }
+            result.add(PropertyLocation(key, location, opt.longFlag))
+        }
+
+        return result
     }
 
     override fun list(): List<Pair<Location, Map<String, String>>> {
-        return listOf(location to options.values.toMapBy({ it.flagUsed }, { it.value }))
+        return listOf(location to optionsUsed.values.toMapBy({ it.flagUsed }, { it.value }))
     }
 }
 
@@ -45,7 +75,7 @@ fun parseArgs(args: Array<String>,
     }
     else {
         val files = ArrayList<String>()
-        val properties = HashMap<String, CommandLineProperty>()
+        val properties = HashMap<Key<*>, CommandLineProperty>()
         val shortOpts: Map<String, CommandLineOption> = options.filter { it.short != null }.toMapBy({ "-${it.short!!}" }, { it })
         val longOpts: Map<String, CommandLineOption> = options.toMapBy({ "--${it.long}" }, { it })
 
@@ -54,7 +84,7 @@ fun parseArgs(args: Array<String>,
             val arg = args[i]
 
             fun Map<String, CommandLineOption>.configNameFor(opt: String) =
-                    this[opt]?.configName ?: throw Misconfiguration("unrecognised command-line option $arg")
+                    this[opt]?.configKey ?: throw Misconfiguration("unrecognised command-line option $arg")
 
             fun storeNextArg(configNameByOpt: Map<String, CommandLineOption>, opt: String) {
                 i++
@@ -84,7 +114,7 @@ fun parseArgs(args: Array<String>,
             i++
         }
 
-        return Pair(CommandLineConfiguration(properties), files)
+        return Pair(CommandLineConfiguration(options.asList(), properties), files)
     }
 }
 
