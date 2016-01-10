@@ -194,7 +194,7 @@ class OverridingAndFallingBack {
     }
 }
 
-inline fun <reified T : Exception> expectThrown(block: () -> Unit): T =
+internal inline fun <reified T : Exception> expectThrown(block: () -> Unit): T =
         try {
             block()
             throw AssertionError("should have thrown ${T::class.simpleName}")

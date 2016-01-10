@@ -66,11 +66,13 @@ private class CommandLineConfiguration(allOptions: List<CommandLineOption>,
 fun parseArgs(args: Array<String>,
               vararg options: CommandLineOption,
               helpOutput: OutputStream = System.err,
-              helpExit: ()->Nothing = { System.exit(0) as Nothing }):
+              helpExit: () -> Nothing = { System.exit(0) as Nothing },
+              programName: String = "<program>",
+              argMetavar: String = "FILE"):
         Pair<Configuration, List<String>>
 {
     if ("--help" in args || "-h" in args) {
-        PrintWriter(helpOutput).printHelp(options)
+        PrintWriter(helpOutput).printHelp(programName, argMetavar, options)
         helpExit()
     }
     else {
@@ -118,7 +120,7 @@ fun parseArgs(args: Array<String>,
     }
 }
 
-fun PrintWriter.printHelp(options: Array<out CommandLineOption>) {
+fun PrintWriter.printHelp(programName: String, argMetavar: String, options: Array<out CommandLineOption>) {
     val helpOptionLine = "-h, --help" to "show this help message and exit"
 
     val helpLines = options.map {
@@ -127,7 +129,7 @@ fun PrintWriter.printHelp(options: Array<out CommandLineOption>) {
 
     val optHelpLength = helpLines.map{it.first.length}.max()!!
 
-    println("Usage: <program> [options] FILE ...")
+    println("Usage: $programName [options] $argMetavar ...")
     println()
     println("Options:")
     for ((opt, description) in helpLines) {

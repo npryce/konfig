@@ -127,6 +127,22 @@ Options:
     }
 
     @Test
+    fun can_specify_program_name_and_arg_metavar() {
+        val helpOutputBytes = ByteArrayOutputStream()
+
+        expectThrown<Help> {
+            parseArgs(arrayOf("--help"),
+                    CommandLineOption(optX),
+                    programName = "the-program",
+                    argMetavar = "ARG",
+                    helpOutput = helpOutputBytes,
+                    helpExit = { throw Help() })
+        }
+
+        assertEquals("""Usage: the-program [options] ARG ...""", helpOutputBytes.toString().lines().first())
+    }
+
+    @Test
     fun reports_usage_if_passed_short_help_option() {
         val helpOutputBytes = ByteArrayOutputStream()
 
