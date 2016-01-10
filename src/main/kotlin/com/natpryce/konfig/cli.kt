@@ -17,7 +17,7 @@ data class CommandLineOption(
     }
 
     val longFlag = "--$long"
-    val shortFlag = if (short == null) null else "-$short"
+    val shortFlag = short?.let { "-$it" }
 }
 
 
