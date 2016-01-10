@@ -30,13 +30,8 @@ private class CommandLineConfiguration(allOptions: List<CommandLineOption>,
     private val optionsByKey = allOptions.toMapBy { it.configKey }
     private val location: Location = Location("command-line parameters")
 
-    override fun <T> getOrNull(key: Key<T>): T? {
-        val optionUsed = optionsUsed[key]
-        return if (optionUsed == null) {
-            null
-        } else {
-            key.parse(PropertyLocation(key, location, optionUsed.flagUsed), optionUsed.value)
-        }
+    override fun <T> getOrNull(key: Key<T>) = optionsUsed[key]?.let {
+        key.parse(PropertyLocation(key, location, it.flagUsed), it.value)
     }
 
     override fun searchPath(key: Key<*>): List<PropertyLocation> {
@@ -72,49 +67,48 @@ fun parseArgs(args: Array<String>,
         PrintWriter(helpOutput).printHelp(programName, argMetavar, options)
         helpExit()
     }
-    else {
-        val files = ArrayList<String>()
-        val properties = HashMap<Key<*>, CommandLineProperty>()
-        val shortOpts: Map<String, CommandLineOption> = options.filter { it.short != null }.toMapBy({ "-${it.short!!}" }, { it })
-        val longOpts: Map<String, CommandLineOption> = options.toMapBy({ "--${it.long}" }, { it })
 
-        var i = 0;
-        while (i < args.size) {
-            val arg = args[i]
+    val files = ArrayList<String>()
+    val properties = HashMap<Key<*>, CommandLineProperty>()
+    val shortOpts: Map<String, CommandLineOption> = options.filter { it.short != null }.toMapBy({ "-${it.short!!}" }, { it })
+    val longOpts: Map<String, CommandLineOption> = options.toMapBy({ "--${it.long}" }, { it })
 
-            fun Map<String, CommandLineOption>.configNameFor(opt: String) =
-                    this[opt]?.configKey ?: throw Misconfiguration("unrecognised command-line option $arg")
+    var i = 0;
+    while (i < args.size) {
+        val arg = args[i]
 
-            fun storeNextArg(configNameByOpt: Map<String, CommandLineOption>, opt: String) {
-                i++
-                if (i >= args.size) throw Misconfiguration("no argument for $arg command-line option")
+        fun Map<String, CommandLineOption>.configNameFor(opt: String) =
+                this[opt]?.configKey ?: throw Misconfiguration("unrecognised command-line option $arg")
 
-                properties[configNameByOpt.configNameFor(opt)] = CommandLineProperty(arg, args[i])
-            }
-
-            when {
-                arg.startsWith("--") -> {
-                    if (arg.contains('=')) {
-                        val flag = arg.substringBefore('=')
-                        val value = arg.substringAfter('=')
-                        properties[longOpts.configNameFor(flag)] = CommandLineProperty(flag, value)
-                    } else {
-                        storeNextArg(longOpts, arg)
-                    }
-                }
-                arg.startsWith("-") -> {
-                    storeNextArg(shortOpts, arg)
-                }
-                else -> {
-                    files.add(arg)
-                }
-            }
-
+        fun storeNextArg(configNameByOpt: Map<String, CommandLineOption>, opt: String) {
             i++
+            if (i >= args.size) throw Misconfiguration("no argument for $arg command-line option")
+
+            properties[configNameByOpt.configNameFor(opt)] = CommandLineProperty(arg, args[i])
         }
 
-        return Pair(CommandLineConfiguration(options.asList(), properties), files)
+        when {
+            arg.startsWith("--") -> {
+                if (arg.contains('=')) {
+                    val flag = arg.substringBefore('=')
+                    val value = arg.substringAfter('=')
+                    properties[longOpts.configNameFor(flag)] = CommandLineProperty(flag, value)
+                } else {
+                    storeNextArg(longOpts, arg)
+                }
+            }
+            arg.startsWith("-") -> {
+                storeNextArg(shortOpts, arg)
+            }
+            else -> {
+                files.add(arg)
+            }
+        }
+
+        i++
     }
+
+    return Pair(CommandLineConfiguration(options.asList(), properties), files)
 }
 
 fun PrintWriter.printHelp(programName: String, argMetavar: String, options: Array<out CommandLineOption>) {
