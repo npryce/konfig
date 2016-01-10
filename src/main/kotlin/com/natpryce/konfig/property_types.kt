@@ -2,7 +2,6 @@ package com.natpryce.konfig
 
 import java.net.URI
 import java.net.URISyntaxException
-import kotlin.text.Regex
 
 /**
  * A parser for string properties (the identity function)
@@ -12,17 +11,16 @@ val stringType = propertyType<String, IllegalArgumentException>(String::toString
 /**
  * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
  */
-inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (String, () -> PropertyLocation) -> T {
-    return { s, provenanceSupplier ->
+inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (PropertyLocation, String) -> T {
+    return { location, stringValue ->
         try {
-            parse(s)
+            parse(stringValue)
         } catch (e: Exception) {
             when (e) {
                 is X -> {
-                    val p = provenanceSupplier()
                     val typeName = T::class.simpleName ?: "value"
 
-                    throw Misconfiguration("${p.source.description} ${p.nameInLocation} - invalid $typeName: $s", e)
+                    throw Misconfiguration("${location.source.description} ${location.nameInLocation} - invalid $typeName: $stringValue", e)
                 }
                 else -> throw e
             }
@@ -64,6 +62,7 @@ val uriType = propertyType<URI, URISyntaxException>(::URI)
 
 private val defaultSeparator = Regex(",\\s*")
 
-fun <T> listType(elementType: (String, () -> PropertyLocation) -> T, separator: Regex = defaultSeparator) = { s: String, p: () -> PropertyLocation ->
-    s.split(separator).map { elementType(it, p) }
-}
+fun <T> listType(elementType: (PropertyLocation, String) -> T, separator: Regex = defaultSeparator) =
+        { p: PropertyLocation, s: String ->
+            s.split(separator).map { elementAsString -> elementType(p, elementAsString) }
+        }

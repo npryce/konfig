@@ -35,12 +35,9 @@ private class CommandLineConfiguration(allOptions: List<CommandLineOption>,
         return if (optionUsed == null) {
             null
         } else {
-            key.parse(optionUsed.value) { PropertyLocation(key, location, optionUsed.flagUsed) }
+            key.parse(PropertyLocation(key, location, optionUsed.flagUsed), optionUsed.value)
         }
     }
-
-    override fun location(key: Key<*>) = PropertyLocation(key, location,
-            optionsByKey[key]?.longFlag ?: throw IllegalArgumentException("no command-line option defined for key ${key.name}"))
 
     override fun searchPath(key: Key<*>): List<PropertyLocation> {
         val opt = optionsByKey[key]

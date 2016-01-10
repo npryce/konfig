@@ -165,16 +165,11 @@ class OverridingAndFallingBack {
     }
 
     @Test
-    fun value_location() {
-        assertThat(config.location(x), equalTo(overrides.location(x)))
-        assertThat(config.location(y), equalTo(defaults.location(y)))
-        assertThat(config.location(z), equalTo(overrides.location(z)))
-    }
-
-    @Test
     fun search_path() {
         for (k in listOf(x, y, z)) {
-            assertThat(config.searchPath(k), equalTo(listOf(overrides.location(k), defaults.location(k))))
+            assertThat(config.searchPath(k), equalTo(listOf(
+                    PropertyLocation(k, overrides.location, k.name),
+                    PropertyLocation(k, defaults.location, k.name))))
         }
     }
 
@@ -241,12 +236,6 @@ class ConfigSubset {
 
         assertFalse(subsetA.contains(key3))
         assertTrue(subsetB.contains(key3))
-    }
-
-    @Test
-    fun value_location() {
-        assertThat(subsetA.location(key1), equalTo(fullSet.location(Key("a.one", stringType))))
-        assertThat(subsetB.location(key2), equalTo(fullSet.location(Key("b.two", stringType))))
     }
 
     @Test

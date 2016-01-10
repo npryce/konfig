@@ -80,16 +80,6 @@ class CommandLineParsing {
     }
 
     @Test
-    fun reports_location_as_the_long_option() {
-        val (config) = parseArgs(arrayOf("--opt-x=10", "-y", "20"),
-                CommandLineOption(optX),
-                CommandLineOption(optY, short = "y"))
-
-        assertThat(config.location(optX).nameInLocation, equalTo("--opt-x"))
-        assertThat(config.location(optY).nameInLocation, equalTo("--opt-y"))
-    }
-
-    @Test
     fun lists_options_set_from_command_line() {
         val (config) = parseArgs(arrayOf("--opt-x=10", "-y", "20"),
                 CommandLineOption(optX),
