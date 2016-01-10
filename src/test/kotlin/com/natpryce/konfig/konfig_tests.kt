@@ -111,6 +111,14 @@ class FromEnvironment {
     }
 
     @Test
+    fun translates_hyphens_in_property_name_to_underscore_in_envvar_name() {
+        val env = mapOf("SEARCH_ENGINE_HTTP_PORT" to "9090")
+        val config = EnvironmentVariables(lookup = { env[it] })
+
+        assertThat(config[Key("search-engine.http-port", intType)], equalTo(9090))
+    }
+
+    @Test
     fun environment_variables_can_be_prefixed() {
         val env = mapOf("XXX_NAME" to "alice")
         val config = EnvironmentVariables(prefix = "XXX_", lookup = { env[it] })

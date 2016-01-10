@@ -229,15 +229,16 @@ class EnvironmentVariables(val prefix: String = "",
         PropertyLocation(key, location, envvar) to lookup(envvar)
     }
 
-    override fun searchPath(key: Key<*>): List<PropertyLocation> {
-        return listOf(PropertyLocation(key, location, toEnvironmentVariable(key.name)))
-    }
+    override fun searchPath(key: Key<*>) =
+            listOf(PropertyLocation(key, location, toEnvironmentVariable(key.name)))
 
     override fun list(): List<Pair<Location, Map<String, String>>> =
             listOf(location to all().filterKeys { it.startsWith(prefix) })
 
-    private fun toEnvironmentVariable(name: String) = prefix + name.toUpperCase().replace('.', '_')
+    private fun toEnvironmentVariable(name: String) = prefix + name.toUpperCase().replace(nonAlphaNumericCharacters, "_")
 }
+
+private val nonAlphaNumericCharacters = Regex("[^A-Za-z0-9]")
 
 /**
  * Looks up configuration in [override] and, if the property is not defined there, looks it up in [fallback].
