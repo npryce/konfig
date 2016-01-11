@@ -112,20 +112,37 @@ class ParsingValues {
 }
 
 class ParsingEnumeratedValues {
-    val enumType = enumType("foo" to 1, "bar" to 2, "baz" to 3)
 
     @Test
-    fun parse_enums() {
-        assertParse(enumType,
+    fun parse_enums_by_name_and_value() {
+        val theType = enumType("foo" to 1, "bar" to 2, "baz" to 3)
+
+        assertParse(theType,
                 "foo" to 1,
                 "bar" to 2,
                 "baz" to 3)
+
+        assertThrowsMisconfiguration(theType, "xxx")
     }
 
+    enum class E { A, B, C }
+
     @Test
-    fun invalid_enum() {
-        assertThrowsMisconfiguration(enumType, "xxx")
+    fun parse_enums_by_elements_of_an_enum_type() {
+        val theType = enumType(E.values())
+
+        assertParse(theType,
+                "A" to E.A,
+                "B" to E.B,
+                "C" to E.C)
+
+        assertThrowsMisconfiguration(theType, "xxx")
+        assertThrowsMisconfiguration(theType, "a")
+        assertThrowsMisconfiguration(theType, "b")
+        assertThrowsMisconfiguration(theType, "c")
     }
+
+
 }
 
 class ParsingLists {
