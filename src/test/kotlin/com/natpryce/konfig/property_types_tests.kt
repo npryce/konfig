@@ -111,6 +111,23 @@ class ParsingValues {
     }
 }
 
+class ParsingEnumeratedValues {
+    val enumType = enumType("foo" to 1, "bar" to 2, "baz" to 3)
+
+    @Test
+    fun parse_enums() {
+        assertParse(enumType,
+                "foo" to 1,
+                "bar" to 2,
+                "baz" to 3)
+    }
+
+    @Test
+    fun invalid_enum() {
+        assertThrowsMisconfiguration(enumType, "xxx")
+    }
+}
+
 class ParsingLists {
     @Test
     fun parse_lists_of_other_types() {

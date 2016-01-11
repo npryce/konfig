@@ -55,6 +55,14 @@ val doubleType = numericPropertyType(String::toDouble)
 val booleanType = propertyType<Boolean, IllegalArgumentException>(String::toBoolean)
 
 /**
+ * An enumerated list of possible values, each specified by the string value used in configuration files and the
+ * value used in the program.
+ */
+inline fun <reified T> enumType(vararg allowed: Pair<String,T>) = propertyType<T, IllegalArgumentException>({valueStr ->
+    allowed.find { it.first == valueStr }?.second?:throw IllegalArgumentException("invalid value: $valueStr; must be one of: ${allowed.map{it.first}}")
+})
+
+/**
  * The type of URI properties
  */
 val uriType = propertyType<URI, URISyntaxException>(::URI)
