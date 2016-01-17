@@ -17,15 +17,22 @@ class StaticallyTypedConfigKeys {
         assertThat(group.b.name, equalTo("group.b"))
     }
 
-
     object a_group : PropertyGroup() {
         val a_property by stringType
     }
 
     @Test
     fun underscore_replaced_with_hyphen() {
-
         assertThat(a_group.a_property.name, equalTo("a-group.a-property"))
+    }
+
+    @Test
+    fun anonymous_object_in_function() {
+        val outer = object : PropertyGroup() {
+            val p by stringType
+        }
+
+        assertThat(outer.p.name, equalTo("outer.p"))
     }
 
 

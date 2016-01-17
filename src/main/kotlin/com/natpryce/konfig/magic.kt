@@ -8,7 +8,7 @@ open class PropertyGroup(private val outer: PropertyGroup? = null) {
 
     private fun namePrefix() = outer?.name?.let { it + "." } ?: ""
 
-    private fun groupName() = javaClass.kotlin.simpleName ?:
+    private fun groupName() = javaClass.kotlin.simpleName?.substringBefore("$") ?:
             throw IllegalArgumentException("cannot determine name of property group")
 
     fun <T> key(keySimpleName: String, type: (PropertyLocation, String) -> T): Key<T> {
