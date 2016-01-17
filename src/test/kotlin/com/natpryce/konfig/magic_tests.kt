@@ -6,7 +6,7 @@ import org.junit.Test
 
 
 class StaticallyTypedConfigKeys {
-    object group : PropertyGroup {
+    object group : PropertyGroup() {
         val a by stringType
         val b by intType
     }
@@ -17,21 +17,26 @@ class StaticallyTypedConfigKeys {
         assertThat(group.b.name, equalTo("group.b"))
     }
 
-    @Test
-    fun key_names_of_local_object() {
-        val more = object : PropertyGroup {
-            val x by stringType
-        }
 
-        assertThat(more.x.name, equalTo("more.x"))
+    object a_group : PropertyGroup() {
+        val a_property by stringType
     }
 
     @Test
     fun underscore_replaced_with_hyphen() {
-        val a_group = object : PropertyGroup {
-            val a_property by stringType
-        }
 
         assertThat(a_group.a_property.name, equalTo("a-group.a-property"))
+    }
+
+
+    object outer : PropertyGroup() {
+        object inner : PropertyGroup(this) {
+            val p by stringType
+        }
+    }
+
+    @Test
+    fun nested_groups() {
+        assertThat(outer.inner.p.name, equalTo("outer.inner.p"))
     }
 }

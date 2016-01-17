@@ -3,13 +3,16 @@ package com.natpryce.konfig
 import kotlin.reflect.KProperty
 
 
-interface PropertyGroup {
-    fun <T> key(name: String, type: (PropertyLocation, String) -> T): Key<T> {
-        val groupClassName: String = javaClass.kotlin.simpleName ?:
-                throw IllegalArgumentException("cannot determine name of property group class")
-        val root = groupClassName.substringBefore('$')
+open class PropertyGroup(private val outer: PropertyGroup? = null) {
+    val name: String by lazy { (namePrefix() + groupName()) }
 
-        return Key((root + "." + name).replace('_', '-'), type)
+    private fun namePrefix() = outer?.name?.let { it + "." } ?: ""
+
+    private fun groupName() = javaClass.kotlin.simpleName ?:
+            throw IllegalArgumentException("cannot determine name of property group")
+
+    fun <T> key(keySimpleName: String, type: (PropertyLocation, String) -> T): Key<T> {
+        return Key((name + "." + keySimpleName).replace('_', '-'), type)
     }
 }
 
