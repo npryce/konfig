@@ -18,3 +18,6 @@ open class PropertyGroup(private val outer: PropertyGroup? = null) {
 
 operator fun <G : PropertyGroup, T> ((PropertyLocation, String) -> T).getValue(group: G, property: KProperty<*>) =
         group.key(property.name, this)
+
+operator fun <SCOPE, T> ((PropertyLocation, String) -> T).getValue(scope: SCOPE?, property: KProperty<*>) =
+        Key(property.name, this)

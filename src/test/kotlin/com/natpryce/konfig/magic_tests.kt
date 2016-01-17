@@ -4,8 +4,18 @@ import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
 import org.junit.Test
 
+val foo by stringType
 
 class StaticallyTypedConfigKeys {
+    val bar by stringType
+
+    @Test
+    fun simply_named_keys_defined_as_variables() {
+        assertThat(foo.name, equalTo("foo"))
+        assertThat(bar.name, equalTo("bar"))
+    }
+
+
     object group : PropertyGroup() {
         val a by stringType
         val b by intType
