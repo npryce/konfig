@@ -7,27 +7,35 @@ To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com
 
 1. Define typed property keys
 
-        object server : PropertyGroup() {
-            val port by intType
-            val host by stringType
-        }
+    ```kotlin
+    object server : PropertyGroup() {
+        val port by intType
+        val host by stringType
+    }
+    ```
 
 2. Build a Configuration object that loads properties:
 
-        val config = systemProperties() overriding
-                     EnvironmentVariables() overriding
-                     ConfigurationProperties.fromFile(File("/etc/myservice.properties")) overriding
-                     ConfigurationProperties.fromResource("defaults.properties")
+    ```kotlin
+    val config = systemProperties() overriding
+                 EnvironmentVariables() overriding
+                 ConfigurationProperties.fromFile(File("/etc/myservice.properties")) overriding
+                 ConfigurationProperties.fromResource("defaults.properties")
+    ```
 
 3. Define some properties.  For example, in `defaults.properties`:
 
-        server.port=8080
-        server.host=0.0.0.0
-
+    ```properties
+    server.port=8080
+    server.host=0.0.0.0
+    ```
+    
 4. Look up properties by key. They are returned as typed values, not strings, and so can be used directly:
 
-        val server = Server(config[server.port], config[server.host])
-        server.start()
+    ```kotlin
+    val server = Server(config[server.port], config[server.host])
+    server.start()
+    ```
 
 
 Konfig can load properties from:
