@@ -5,29 +5,29 @@
 
 To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com.natpryce.konfig.*` and then:
 
-1. define typed property keys
+1. Define typed property keys
 
-        object http : PropertyGroup() {
+        object server : PropertyGroup() {
             val port by intType
+            val host by stringType
         }
 
-2. build a Configuration object that loads properties:
+2. Build a Configuration object that loads properties:
 
         val config = systemProperties() overriding
                      EnvironmentVariables() overriding
                      ConfigurationProperties.fromFile(File("/etc/myservice.properties")) overriding
                      ConfigurationProperties.fromResource("defaults.properties")
 
-3. define some properties.  For example, in `defaults.properties`:
+3. Define some properties.  For example, in `defaults.properties`:
 
-        http.port=8080
+        server.port=8080
+        server.host=0.0.0.0
 
-4. look up properties by key:
+4. Look up properties by key. They are returned as typed values, not strings, and so can be used directly:
 
-        val port = config[http.port]
-        
-        println(port)
-        // prints 8080
+        val server = Server(config[server.port], config[server.host])
+        server.start()
 
 
 Konfig can load properties from:
