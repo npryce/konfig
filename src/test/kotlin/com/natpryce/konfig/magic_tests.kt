@@ -53,7 +53,65 @@ class StaticallyTypedConfigKeys {
     }
 
     @Test
-    fun nested_groups() {
+    fun nested_groups_with_nesting_defined_explicitly() {
         assertThat(outer.inner.p.name, equalTo("outer.inner.p"))
     }
+
+    object outer2 : PropertyGroup() {
+        object inner : PropertyGroup() {
+            val p by stringType
+        }
+    }
+
+    @Test
+    fun nesting_detected_by_reflection() {
+        assertThat(outer2.inner.p.name, equalTo("outer2.inner.p"))
+    }
+
+    open class Common : PropertyGroup() {
+        val a by stringType
+    }
+
+    object outer3 : PropertyGroup() {
+        object x : Common()
+    }
+
+    @Test
+    fun common_property_definition_as_a_singleton_object() {
+        assertThat(outer3.x.a.name, equalTo("outer3.x.a"))
+    }
 }
+
+
+class IntrospectionOfMagicPropertyKeys {
+    object conf : AllProperties() {
+        val p by intType
+
+        object g : PropertyGroup() {
+            val q by stringType
+
+            object a : PropertyGroup() {
+                val a1 by stringType
+                val a2 by stringType
+            }
+
+            object b : PropertyGroup() {
+                val b1 by stringType
+                val b2 by stringType
+            }
+        }
+    }
+
+    @Test
+    fun introspection() {
+        assertThat(conf.keys(), equalTo(listOf<Key<*>>(
+                Key("p", intType),
+                Key("g.q", stringType),
+                Key("g.a.a1", stringType),
+                Key("g.a.a2", stringType),
+                Key("g.b.b1", stringType),
+                Key("g.b.b2", stringType)
+        )))
+    }
+}
+
