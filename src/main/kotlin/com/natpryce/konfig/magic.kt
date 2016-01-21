@@ -4,15 +4,15 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.memberProperties
 
 
-open class AllProperties {
-    fun keys(): List<Key<*>> {
+open class PropertyKeys : Iterable<Key<*>> {
+    override operator fun iterator(): Iterator<Key<*>> {
         val k = javaClass.kotlin
-        return k.memberProperties.map { it.get(this) }.filterIsInstance<Key<*>>() +
-               k.nestedClasses.map { it.objectInstance }.filterIsInstance<PropertyGroup>().flatMap { it.keys() }
+        return (k.memberProperties.map { it.get(this) }.filterIsInstance<Key<*>>() +
+               k.nestedClasses.map { it.objectInstance }.filterIsInstance<PropertyGroup>().flatten()).iterator()
     }
 }
 
-open class PropertyGroup(private val outer: PropertyGroup? = null) : AllProperties() {
+open class PropertyGroup(private val outer: PropertyGroup? = null) : PropertyKeys() {
     private fun outer() = outer ?: javaClass.enclosingClass.kotlin.objectInstance as? PropertyGroup
     private fun name() : String = namePrefix() + groupName()
     private fun namePrefix() = outer()?.name()?.let { it + "." } ?: ""

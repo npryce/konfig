@@ -84,7 +84,7 @@ class StaticallyTypedConfigKeys {
 
 
 class IntrospectionOfMagicPropertyKeys {
-    object conf : AllProperties() {
+    object keys : PropertyKeys() {
         val p by intType
 
         object g : PropertyGroup() {
@@ -104,7 +104,7 @@ class IntrospectionOfMagicPropertyKeys {
 
     @Test
     fun introspection() {
-        assertThat(conf.keys(), equalTo(listOf<Key<*>>(
+        assertThat(keys.toList(), equalTo(listOf<Key<*>>(
                 Key("p", intType),
                 Key("g.q", stringType),
                 Key("g.a.a1", stringType),
