@@ -27,7 +27,7 @@ private data class CommandLineProperty(val flagUsed: String, val value: String)
 private class CommandLineConfiguration(allOptions: List<CommandLineOption>,
                                        private val optionsUsed: Map<Key<*>, CommandLineProperty>) : Configuration
 {
-    private val optionsByKey = allOptions.toMapBy { it.configKey }
+    private val optionsByKey = allOptions.associateBy { it.configKey }
     private val location: Location = Location("command-line parameters")
 
     override fun <T> getOrNull(key: Key<T>) = optionsUsed[key]?.let {
@@ -50,7 +50,7 @@ private class CommandLineConfiguration(allOptions: List<CommandLineOption>,
     }
 
     override fun list(): List<Pair<Location, Map<String, String>>> {
-        return listOf(location to optionsUsed.values.toMapBy({ it.flagUsed }, { it.value }))
+        return listOf(location to optionsUsed.values.associateBy({ it.flagUsed }, { it.value }))
     }
 }
 
@@ -70,8 +70,8 @@ fun parseArgs(args: Array<String>,
 
     val files = ArrayList<String>()
     val properties = HashMap<Key<*>, CommandLineProperty>()
-    val shortOpts: Map<String, CommandLineOption> = options.filter { it.short != null }.toMapBy({ "-${it.short!!}" }, { it })
-    val longOpts: Map<String, CommandLineOption> = options.toMapBy({ "--${it.long}" }, { it })
+    val shortOpts: Map<String, CommandLineOption> = options.filter { it.short != null }.associateBy({ "-${it.short!!}" }, { it })
+    val longOpts: Map<String, CommandLineOption> = options.associateBy({ "--${it.long}" }, { it })
 
     var i = 0;
     while (i < args.size) {

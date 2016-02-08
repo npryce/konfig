@@ -64,7 +64,7 @@ inline fun <reified T> enumType(allowed: Map<String,T>) = propertyType<T, Illega
 
 inline fun <reified T> enumType(vararg allowed: Pair<String,T>) = enumType(mapOf(*allowed))
 
-inline fun <reified T : Enum<T>> enumType(allowed: Array<T>) = enumType(allowed.toMap { it.name to it })
+inline fun <reified T : Enum<T>> enumType(allowed: Array<T>) = enumType(allowed.associate { it.name to it })
 
 /**
  * The type of URI properties
