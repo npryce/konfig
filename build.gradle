@@ -5,14 +5,14 @@ println "building version ${version}"
 
 
 buildscript {
-    ext.kotlin_version = '1.0.0-beta-4583'
+    ext.kotlin_version = '1.0.0-rc-1036'
     repositories {
         mavenCentral()
         jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.4"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.6"
     }
 }
 
@@ -23,6 +23,7 @@ apply plugin: 'signing'
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
@@ -30,7 +31,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile 'junit:junit:4.12'
-    testCompile 'com.natpryce:hamkrest:0.0.8.0'
+    testCompile 'com.natpryce:hamkrest:SNAPSHOT'
 }
 
 jar {
