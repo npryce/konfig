@@ -30,7 +30,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile 'junit:junit:4.12'
-    testCompile 'com.natpryce:hamkrest:0.0.9.0'
+    testCompile 'com.natpryce:hamkrest:1.1.0.0'
 }
 
 jar {
