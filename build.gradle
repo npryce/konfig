@@ -5,14 +5,14 @@ println "building version ${version}"
 
 
 buildscript {
-    ext.kotlin_version = '1.0.0-rc-1036'
+    ext.kotlin_version = '1.0.0'
     repositories {
         mavenCentral()
         jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.6"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.7"
     }
 }
 
