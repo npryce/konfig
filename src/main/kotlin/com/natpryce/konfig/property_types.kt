@@ -1,11 +1,15 @@
+@file:JvmName("PropertyTypes")
 package com.natpryce.konfig
 
 import java.net.URI
 import java.net.URISyntaxException
+import java.time.*
+import java.time.format.DateTimeParseException
 
 /**
  * A parser for string properties (the identity function)
  */
+@JvmField
 val stringType = propertyType<String, IllegalArgumentException>(String::toString)
 
 /**
@@ -37,21 +41,25 @@ inline fun <reified T> numericPropertyType(noinline parse: (String) -> T) =
 /**
  * The type of Int properties
  */
+@JvmField
 val intType = numericPropertyType(String::toInt)
 
 /**
  * The type of Long properties
  */
+@JvmField
 val longType = numericPropertyType(String::toLong)
 
 /**
  * The type of Double properties
  */
+@JvmField
 val doubleType = numericPropertyType(String::toDouble)
 
 /**
  * The type of Boolean properties
  */
+@JvmField
 val booleanType = propertyType<Boolean, IllegalArgumentException>(String::toBoolean)
 
 /**
@@ -69,6 +77,7 @@ inline fun <reified T : Enum<T>> enumType(allowed: Array<T>) = enumType(allowed.
 /**
  * The type of URI properties
  */
+@JvmField
 val uriType = propertyType<URI, URISyntaxException>(::URI)
 
 
@@ -78,3 +87,18 @@ fun <T> listType(elementType: (PropertyLocation, String) -> T, separator: Regex 
         { p: PropertyLocation, s: String ->
             s.split(separator).map { elementAsString -> elementType(p, elementAsString) }
         }
+
+@JvmField
+val durationType = propertyType<Duration, DateTimeParseException>(Duration::parse)
+
+@JvmField
+val localTimeType = propertyType<LocalTime, DateTimeParseException>(LocalTime::parse)
+
+@JvmField
+val localDateType = propertyType<LocalDate, DateTimeParseException>(LocalDate::parse)
+
+@JvmField
+val localDateTimeType = propertyType<LocalDateTime, DateTimeParseException>(LocalDateTime::parse)
+
+@JvmField
+val instantType = propertyType<Instant, DateTimeParseException>(Instant::parse)

@@ -1,3 +1,4 @@
+@file:JvmName("CommandLineOptions")
 package com.natpryce.konfig
 
 import java.io.OutputStream

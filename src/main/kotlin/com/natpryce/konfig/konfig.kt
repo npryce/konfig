@@ -148,17 +148,20 @@ class ConfigurationProperties(private val properties: Properties, override val l
         /**
          * Returns the system properties as a Config object.
          */
+        @JvmStatic
         fun systemProperties() = ConfigurationProperties(System.getProperties(), Location("system properties"))
 
         /**
          * Load from resources relative to a class
          */
+        @JvmStatic
         fun fromResource(relativeToClass: Class<*>, resourceName: String) =
                 loadFromResource(resourceName, relativeToClass.getResource(resourceName))
 
         /**
          * Load from resource within the system classloader.
          */
+        @JvmStatic
         fun fromResource(resourceName: String): ConfigurationProperties {
             val classLoader = ClassLoader.getSystemClassLoader()
             return loadFromResource(resourceName, classLoader.getResource(resourceName))
@@ -173,6 +176,7 @@ class ConfigurationProperties(private val properties: Properties, override val l
         /**
          * Load from file
          */
+        @JvmStatic
         fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null, Location(file.absolutePath, file.toURI())) {
             "file $file does not exist"
         }
@@ -222,7 +226,7 @@ class EnvironmentVariables(val prefix: String = "",
                            private val all: ()->Map<String,String> = System::getenv)
     : Configuration
 {
-    public val location = Location("environment variables")
+    val location = Location("environment variables")
 
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { name ->
         var envvar = toEnvironmentVariable(name)
