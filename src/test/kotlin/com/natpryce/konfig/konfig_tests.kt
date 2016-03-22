@@ -197,6 +197,33 @@ class OverridingAndFallingBack {
     }
 }
 
+class SearchConfigurationList {
+    val configA = ConfigurationMap("a" to "A1", location = Location("a"))
+    val configB = ConfigurationMap("a" to "A2", "b" to "B1", location = Location("b"))
+    val configC = ConfigurationMap("a" to "A3", "b" to "B2", "c" to "C1", location = Location("c"))
+
+    val config = search(configA, configB, configC)
+
+    val a = Key("a", stringType)
+    val b = Key("b", stringType)
+    val c = Key("c", stringType)
+
+    @Test
+    fun overrides_default_properties() {
+        assertThat(config[a], equalTo("A1"))
+        assertThat(config[b], equalTo("B1"))
+        assertThat(config[c], equalTo("C1"))
+    }
+
+    @Test
+    fun contains() {
+        assertTrue(config.contains(a))
+        assertTrue(config.contains(b))
+        assertTrue(config.contains(c))
+        assertFalse(config.contains(Key("bob", stringType)))
+    }
+}
+
 internal inline fun <reified T : Exception> expectThrown(block: () -> Unit): T =
         try {
             block()

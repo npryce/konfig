@@ -1,3 +1,4 @@
+@file:JvmName("Konfig")
 package com.natpryce.konfig
 
 import java.io.File
@@ -255,8 +256,9 @@ class Override(val override: Configuration, val fallback: Configuration) : Confi
     override fun list() = override.list() + fallback.list()
 }
 
-infix fun Configuration.overriding(defaults: Configuration?) =
-        if (defaults == null) this else Override(this, defaults)
+infix fun Configuration.overriding(defaults: Configuration?) = if (defaults == null) this else Override(this, defaults)
+
+fun search(first: Configuration, vararg rest: Configuration) = rest.fold(first, ::Override)
 
 /**
  * Represents a subset of a larger set of configuration properties.
