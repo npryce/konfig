@@ -112,7 +112,6 @@ class ParsingValues {
 }
 
 class ParsingEnumeratedValues {
-
     @Test
     fun parse_enums_by_name_and_value() {
         val theType = enumType("foo" to 1, "bar" to 2, "baz" to 3)
@@ -129,19 +128,23 @@ class ParsingEnumeratedValues {
 
     @Test
     fun parse_enums_by_elements_of_an_enum_type() {
-        val theType = enumType(E.values())
+        val typeFromVarargs = enumType(E.A, E.B, E.C)
+        val typeFromArray = enumType(*E.values())
+        val typeFromIterable = enumType(setOf(E.A, E.B, E.C))
+        val typeFromJavaClass = enumType(E::class.java)
 
-        assertParse(theType,
+        for (theType in listOf(typeFromVarargs, typeFromArray, typeFromIterable, typeFromJavaClass)) {
+            assertParse(theType,
                 "A" to E.A,
                 "B" to E.B,
                 "C" to E.C)
 
-        assertThrowsMisconfiguration(theType, "xxx")
-        assertThrowsMisconfiguration(theType, "a")
-        assertThrowsMisconfiguration(theType, "b")
-        assertThrowsMisconfiguration(theType, "c")
+            assertThrowsMisconfiguration(theType, "xxx")
+            assertThrowsMisconfiguration(theType, "a")
+            assertThrowsMisconfiguration(theType, "b")
+            assertThrowsMisconfiguration(theType, "c")
+        }
     }
-
 
 }
 

@@ -1,42 +1,65 @@
 @file:JvmName("PropertyTypes")
+
 package com.natpryce.konfig
 
 import java.net.URI
 import java.net.URISyntaxException
 import java.time.*
 import java.time.format.DateTimeParseException
+import java.util.*
 
-/**
- * A parser for string properties (the identity function)
- */
-@JvmField
-val stringType = propertyType<String, IllegalArgumentException>(String::toString)
+sealed class ParseResult<T> {
+    class Success<T>(val value: T) : ParseResult<T>()
+    class Failure<T>(val exception: Exception) : ParseResult<T>()
+}
 
-/**
- * Wraps a [parse] function and translates exceptions of type [X] into [Misconfiguration] exceptions.
- */
-inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (PropertyLocation, String) -> T {
+fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): (PropertyLocation, String) -> T {
     return { location, stringValue ->
-        try {
-            parse(stringValue)
-        } catch (e: Exception) {
-            when (e) {
-                is X -> {
-                    val typeName = T::class.simpleName ?: "value"
-
-                    throw Misconfiguration("${location.source.description} ${location.nameInLocation} - invalid $typeName: $stringValue", e)
-                }
-                else -> throw e
-            }
+        val parsed = parse(stringValue)
+        when (parsed) {
+            is ParseResult.Success<T> ->
+                parsed.value
+            is ParseResult.Failure<T> ->
+                throw Misconfiguration(
+                    "${location.source.description} ${location.nameInLocation} - invalid $typeName: $stringValue",
+                    parsed.exception)
         }
     }
 }
 
+fun <T> propertyType(type: Class<T>, parse: (String) -> ParseResult<T>) = propertyType(type.simpleName, parse)
+
+inline fun <reified T : Any> propertyType(noinline parse: (String) -> ParseResult<T>) = propertyType(T::class.java, parse)
+
+fun <T, X : Throwable> parser(exceptionType: Class<X>, parse: (String) -> T) = fun(s: String) =
+    try {
+        ParseResult.Success(parse(s))
+    }
+    catch(e: Exception) {
+        if (exceptionType.isInstance(e)) {
+            ParseResult.Failure<T>(e)
+        }
+        else {
+            throw e
+        }
+    }
+
+
+inline fun <T, reified X : Throwable> parser(noinline parse: (String) -> T) =
+    parser(X::class.java, parse)
+
+
 /**
  * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
  */
-inline fun <reified T> numericPropertyType(noinline parse: (String) -> T) =
-        propertyType<T, NumberFormatException>(parse)
+inline fun <reified T : Any> numericPropertyType(noinline parse: (String) -> T) =
+    propertyType(parser<T, NumberFormatException>(parse))
+
+/**
+ * The type of string properties
+ */
+@JvmField
+val stringType = propertyType { ParseResult.Success(it) }
 
 /**
  * The type of Int properties
@@ -60,45 +83,57 @@ val doubleType = numericPropertyType(String::toDouble)
  * The type of Boolean properties
  */
 @JvmField
-val booleanType = propertyType<Boolean, IllegalArgumentException>(String::toBoolean)
+val booleanType = propertyType { ParseResult.Success(it.toBoolean()) }
 
 /**
  * An enumerated list of possible values, each specified by the string value used in configuration files and the
  * value used in the program.
  */
-inline fun <reified T> enumType(allowed: Map<String,T>) = propertyType<T, IllegalArgumentException>({str ->
-    allowed[str]?:throw IllegalArgumentException("invalid value: $str; must be one of: ${allowed.keys}")
-})
+inline fun <reified T : Any> enumType(allowed: Map<String, T>) = enumType(T::class.java, allowed)
 
-inline fun <reified T> enumType(vararg allowed: Pair<String,T>) = enumType(mapOf(*allowed))
+fun <T : Any> enumType(enumType: Class<T>, allowed: Map<String, T>) = propertyType(enumType) { str ->
+    allowed[str]
+        ?.let { ParseResult.Success(it) }
+        ?: ParseResult.Failure<T>(IllegalArgumentException("invalid value: $str; must be one of: ${allowed.keys}"))
+}
 
-inline fun <reified T : Enum<T>> enumType(allowed: Array<T>) = enumType(allowed.associate { it.name to it })
+fun <T : Enum<T>> enumType(enumClass: Class<T>, allowed: Iterable<T>) = enumType(enumClass, allowed.associate { it.name to it })
+
+inline fun <reified T : Enum<T>> enumType(allowed: Iterable<T>) = enumType(T::class.java, allowed.associate { it.name to it })
+inline fun <reified T: Any> enumType(vararg allowed: Pair<String, T>) = enumType(mapOf(*allowed))
+inline fun <reified T : Enum<T>> enumType(vararg allowed: T) = enumType(listOf(*allowed))
+
+fun <T : Enum<T>> enumType(enumClass: java.lang.Class<T>) = enumType(enumClass, EnumSet.allOf(enumClass))
+inline fun <reified T : Enum<T>> enumType() = enumType(T::class.java)
 
 /**
  * The type of URI properties
  */
 @JvmField
-val uriType = propertyType<URI, URISyntaxException>(::URI)
+val uriType = propertyType(parser<URI, URISyntaxException>(::URI))
 
 
 private val defaultSeparator = Regex(",\\s*")
 
 fun <T> listType(elementType: (PropertyLocation, String) -> T, separator: Regex = defaultSeparator) =
-        { p: PropertyLocation, s: String ->
-            s.split(separator).map { elementAsString -> elementType(p, elementAsString) }
-        }
+    { p: PropertyLocation, s: String ->
+        s.split(separator).map { elementAsString -> elementType(p, elementAsString) }
+    }
+
+
+inline fun <reified T:Any> temporalType(noinline fn: (String)->T) = propertyType(parser<T,DateTimeParseException>(fn))
 
 @JvmField
-val durationType = propertyType<Duration, DateTimeParseException>(Duration::parse)
+val durationType = temporalType(Duration::parse)
 
 @JvmField
-val localTimeType = propertyType<LocalTime, DateTimeParseException>(LocalTime::parse)
+val localTimeType = temporalType(LocalTime::parse)
 
 @JvmField
-val localDateType = propertyType<LocalDate, DateTimeParseException>(LocalDate::parse)
+val localDateType = temporalType(LocalDate::parse)
 
 @JvmField
-val localDateTimeType = propertyType<LocalDateTime, DateTimeParseException>(LocalDateTime::parse)
+val localDateTimeType = temporalType(LocalDateTime::parse)
 
 @JvmField
-val instantType = propertyType<Instant, DateTimeParseException>(Instant::parse)
+val instantType = temporalType(Instant::parse)
