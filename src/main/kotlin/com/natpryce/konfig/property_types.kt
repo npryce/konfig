@@ -13,7 +13,7 @@ import java.time.format.DateTimeParseException
 val stringType = propertyType<String, IllegalArgumentException>(String::toString)
 
 /**
- * Wraps a [parse] function and translates [NumberFormatException]s into [Misconfiguration] exceptions.
+ * Wraps a [parse] function and translates exceptions of type [X] into [Misconfiguration] exceptions.
  */
 inline fun <reified T, reified X : Exception> propertyType(crossinline parse: (String) -> T): (PropertyLocation, String) -> T {
     return { location, stringValue ->
