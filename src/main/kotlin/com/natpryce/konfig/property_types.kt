@@ -127,6 +127,9 @@ inline fun <reified T:Any> temporalType(noinline fn: (String)->T) = propertyType
 val durationType = temporalType(Duration::parse)
 
 @JvmField
+val periodType = temporalType(Period::parse)
+
+@JvmField
 val localTimeType = temporalType(LocalTime::parse)
 
 @JvmField
