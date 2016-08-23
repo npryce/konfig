@@ -209,4 +209,25 @@ Options:
 
         assertThat(config.searchPath(optX).map { it.nameInLocation }, equalTo(listOf("-x", "--the-x")))
     }
+
+    @Test(expected = Misconfiguration::class)
+    fun report_required_params() {
+        try {
+            parseArgs(emptyArray(),
+                    CommandLineOption(optX, required = true))
+        }
+        catch (expected: Misconfiguration) {
+            assertThat(expected.message, present(containsSubstring("--opt-x")))
+            assertThat(expected.message, present(containsSubstring("The following options are required")))
+            throw expected
+        }
+    }
+
+    @Test
+    fun report_required_params_are_ok() {
+        val (config) = parseArgs(arrayOf("--opt-x", "bar"),
+                CommandLineOption(optX, required = true))
+        assertThat(config[optX], equalTo("bar"))
+    }
+
 }
