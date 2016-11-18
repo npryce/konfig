@@ -5,7 +5,7 @@ println "building version ${version}"
 
 
 buildscript {
-    ext.kotlin_version = '1.0.3'
+    ext.kotlin_version = '1.0.5'
     repositories {
         mavenCentral()
         jcenter()
