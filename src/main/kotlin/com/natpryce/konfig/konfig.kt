@@ -230,7 +230,7 @@ class EnvironmentVariables(val prefix: String = "",
     val location = Location("environment variables")
 
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { name ->
-        var envvar = toEnvironmentVariable(name)
+        val envvar = toEnvironmentVariable(name)
         PropertyLocation(key, location, envvar) to lookup(envvar)
     }
 
@@ -241,6 +241,8 @@ class EnvironmentVariables(val prefix: String = "",
             listOf(location to all().filterKeys { it.startsWith(prefix) })
 
     private fun toEnvironmentVariable(name: String) = prefix + name.toUpperCase().replace(nonAlphaNumericCharacters, "_")
+    
+    companion object : Configuration by EnvironmentVariables()
 }
 
 private val nonAlphaNumericCharacters = Regex("[^A-Za-z0-9]")
