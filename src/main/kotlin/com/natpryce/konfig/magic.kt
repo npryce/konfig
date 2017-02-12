@@ -13,7 +13,7 @@ open class PropertyKeys : Iterable<Key<*>> {
 }
 
 open class PropertyGroup(private val outer: PropertyGroup? = null) : PropertyKeys() {
-    private fun outer() = outer ?: javaClass.enclosingClass.kotlin.objectInstance as? PropertyGroup
+    private fun outer() = outer ?: javaClass.enclosingClass?.kotlin?.objectInstance as? PropertyGroup
     private fun name() : String = namePrefix() + groupName()
     private fun namePrefix() = outer()?.name()?.let { it + "." } ?: ""
     private fun groupName() = javaClass.kotlin.simpleName?.substringBefore("$") ?:

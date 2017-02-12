@@ -6,6 +6,11 @@ import org.junit.Test
 
 val foo by stringType
 
+object group : PropertyGroup() {
+    val a by stringType
+    val b by intType
+}
+
 class StaticallyTypedConfigKeys {
     val bar by stringType
 
@@ -16,10 +21,7 @@ class StaticallyTypedConfigKeys {
     }
 
 
-    object group : PropertyGroup() {
-        val a by stringType
-        val b by intType
-    }
+
 
     @Test
     fun key_names_of_singleton_object() {
