@@ -10,7 +10,8 @@ data class CommandLineOption(
         val long: String = configKey.name.replace('.', '-'),
         val short: String? = null,
         val description: String = "set ${configKey.name.replace(".", " ")}",
-        val metavar: String = long.toUpperCase())
+        val metavar: String = long.toUpperCase(),
+        val required: Boolean = false)
 {
     init {
         if (long.startsWith("-")) throw IllegalArgumentException("long flag must not be specified with leading '-'")
@@ -108,18 +109,33 @@ fun parseArgs(args: Array<String>,
 
         i++
     }
-
+    validateRequiredParameters(options, properties)
     return Pair(CommandLineConfiguration(options.asList(), properties), files)
+}
+
+private fun validateRequiredParameters(options: Array<out CommandLineOption>,
+                                       properties: HashMap<Key<*>, CommandLineProperty>) {
+    val missingOptions = options
+            .filter { it.required && !properties.containsKey(it.configKey) }
+            .map { it.formatCmdOption() }
+    if (missingOptions.isNotEmpty()) {
+        val optHelpLength = missingOptions.map { it.first.length }.max()!!
+        val error = missingOptions
+                .joinTo(StringBuilder("The following options are required:").appendln().appendln(),
+                        separator = System.lineSeparator()) {
+                    val (opt, description) = it
+                    "  ${opt.padEnd(optHelpLength)}  $description"
+                }
+        throw Misconfiguration(error.toString())
+    }
 }
 
 fun PrintWriter.printHelp(programName: String, argMetavar: String, options: Array<out CommandLineOption>) {
     val helpOptionLine = "-h, --help" to "show this help message and exit"
 
-    val helpLines = options.map {
-        (it.short?.let { s -> "-$s ${it.metavar}, " } ?: "") + "--${it.long}=${it.metavar}" to it.description
-    } + helpOptionLine
+    val helpLines = options.map { it.formatCmdOption() } + helpOptionLine
 
-    val optHelpLength = helpLines.map{it.first.length}.max()!!
+    val optHelpLength = helpLines.map { it.first.length }.max()!!
 
     println("Usage: $programName [options] $argMetavar ...")
     println()
@@ -129,6 +145,9 @@ fun PrintWriter.printHelp(programName: String, argMetavar: String, options: Arra
     }
     flush()
 }
+
+private fun CommandLineOption.formatCmdOption() =
+        (short?.let { s -> "-$s $metavar, " } ?: "") + "--$long=$metavar" to description
 
 infix fun Pair<Configuration, List<String>>.overriding(defaults: Configuration) = copy(first = first overriding defaults)
 
