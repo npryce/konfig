@@ -1,11 +1,12 @@
 @file:JvmName("Konfig")
+
 package com.natpryce.konfig
 
 import java.io.File
 import java.io.InputStream
 import java.net.URI
 import java.net.URL
-import java.util.*
+import java.util.Properties
 
 /**
  * Error thrown when a mandatory property is missing
@@ -26,9 +27,9 @@ class Misconfiguration(message: String, cause: Exception? = null) : RuntimeExcep
  * ~~~~~~~~
  */
 data class Key<out T>(val name: String, val parse: (PropertyLocation, String) -> T) {
-    fun getOrNullBy(lookup: (String)->Pair<PropertyLocation,String?>) : T? {
-        val (propertyLocation,stringValue) = lookup(name)
-        return stringValue?.let{parse(propertyLocation, stringValue)}
+    fun getOrNullBy(lookup: (String) -> Pair<PropertyLocation, String?>): T? {
+        val (propertyLocation, stringValue) = lookup(name)
+        return stringValue?.let { parse(propertyLocation, stringValue) }
     }
 }
 
@@ -40,9 +41,9 @@ data class Key<out T>(val name: String, val parse: (PropertyLocation, String) ->
  */
 data class Location(val description: String, val uri: URI? = null) {
     constructor(file: File) : this(file.absolutePath, file.toURI())
-
+    
     constructor(uri: URI) : this(uri.toString(), uri)
-
+    
     companion object {
         /**
          * Describes the location of configuration data that is compiled into the application, as resources
@@ -71,35 +72,35 @@ interface Configuration {
      */
     @Throws(Misconfiguration::class)
     operator fun <T> get(key: Key<T>): T = getOrElse(key) { key -> throw Misconfiguration(missingPropertyMessage(key)) }
-
+    
     /**
      * Look up a property value identified by [key], or return [default] with the key if there is no definition of the
      * property.
      */
     fun <T> getOrElse(key: Key<T>, default: T): T = getOrElse(key) { default }
-
+    
     /**
      * Look up a property value identified by [key], or return `null` if there is no definition of the
      * property.
      */
     fun <T> getOrNull(key: Key<T>): T?
-
+    
     /**
      * Look up a property value identified by [key], or call [default] with the key if there is no definition of the
      * property.
      */
     fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T = getOrNull(key) ?: default(key)
-
+    
     fun contains(key: Key<*>) = getOrNull(key) != null
-
+    
     /**
      * Report the locations that will be searched for a configuration property, in priority order.  The value used
      * is taken from the first location in the list that contains a mapping for the key.
      */
     fun searchPath(key: Key<*>): List<PropertyLocation>
-
+    
     fun list(): List<Pair<Location, Map<String, String>>>
-
+    
 }
 
 /**
@@ -107,21 +108,21 @@ interface Configuration {
  * for [key].
  */
 fun Configuration.missingPropertyMessage(key: Key<*>) =
-        "${key.name} property not found; searched:\n${searchPath(key).description}"
+    "${key.name} property not found; searched:\n${searchPath(key).description}"
 
 val List<PropertyLocation>.description: String
     get() = map { " - ${it.description}" }.joinToString(separator = "\n", postfix = "\n")
 
 
-abstract class  LocatedConfiguration : Configuration {
+abstract class LocatedConfiguration : Configuration {
     abstract val location: Location
-
+    
     /**
      * An implementation that works for a [Configuration] that is loaded from single source, and must be
      * overridden if the [Configuration] searches in multiple sources.
      */
     override fun searchPath(key: Key<*>): List<PropertyLocation> = listOf(location(key))
-
+    
     protected fun location(key: Key<*>) = PropertyLocation(key, location, key.name)
 }
 
@@ -129,36 +130,35 @@ abstract class  LocatedConfiguration : Configuration {
  * Configuration stored in a [Properties] object.
  */
 class ConfigurationProperties(private val properties: Properties, override val location: Location = Location.INTRINSIC) :
-        LocatedConfiguration()
-{
-    override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy {name ->
+    LocatedConfiguration() {
+    override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { name ->
         PropertyLocation(key, location, name) to properties.getProperty(name)
     }
-
+    
     override fun contains(key: Key<*>) = properties.getProperty(key.name) != null
-
+    
     override fun searchPath(key: Key<*>): List<PropertyLocation> {
         return listOf(PropertyLocation(key, location, key.name))
     }
-
-    override fun list(): List<Pair<Location,Map<String, String>>> {
+    
+    override fun list(): List<Pair<Location, Map<String, String>>> {
         return listOf(location to properties.stringPropertyNames().associateBy({ it }, { properties.getProperty(it) }))
     }
-
+    
     companion object {
         /**
          * Returns the system properties as a Config object.
          */
         @JvmStatic
         fun systemProperties() = ConfigurationProperties(System.getProperties(), Location("system properties"))
-
+        
         /**
          * Load from resources relative to a class
          */
         @JvmStatic
         fun fromResource(relativeToClass: Class<*>, resourceName: String) =
-                loadFromResource(resourceName, relativeToClass.getResource(resourceName))
-
+            loadFromResource(resourceName, relativeToClass.getResource(resourceName))
+        
         /**
          * Load from resource within the system classloader.
          */
@@ -167,13 +167,13 @@ class ConfigurationProperties(private val properties: Properties, override val l
             val classLoader = ClassLoader.getSystemClassLoader()
             return loadFromResource(resourceName, classLoader.getResource(resourceName))
         }
-
+        
         private fun loadFromResource(resourceName: String, resourceUrl: URL?): ConfigurationProperties {
             return load(resourceUrl?.openStream(), Location("resource $resourceName", resourceUrl?.toURI())) {
                 "resource $resourceName not found"
             }
         }
-
+        
         /**
          * Load from file
          */
@@ -181,11 +181,11 @@ class ConfigurationProperties(private val properties: Properties, override val l
         fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null, Location(file.absolutePath, file.toURI())) {
             "file $file does not exist"
         }
-
+        
         private fun load(input: InputStream?, location: Location, errorMessageFn: () -> String) =
-                (input ?: throw Misconfiguration(errorMessageFn())).use {
-                    ConfigurationProperties(Properties().apply { load(input) }, location)
-                }
+            (input ?: throw Misconfiguration(errorMessageFn())).use {
+                ConfigurationProperties(Properties().apply { load(input) }, location)
+            }
     }
 }
 
@@ -194,23 +194,31 @@ class ConfigurationProperties(private val properties: Properties, override val l
  * Configuration stored in a map.
  */
 class ConfigurationMap(private val properties: Map<String, String>, public override val location: Location = Location.INTRINSIC) :
-        LocatedConfiguration()
-{
-    /**
-     * A convenience method for creating a [Configuration] as an inline expression.
-     */
-    constructor(vararg entries: Pair<String, String>, location: Location = Location.INTRINSIC) : this(mapOf(*entries), location)
-
+    LocatedConfiguration() {
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { location(key) to properties[key.name] }
-
+    
     override fun contains(key: Key<*>): Boolean {
         return key.name in properties
     }
-
+    
     override fun list(): List<Pair<Location, Map<String, String>>> {
         return listOf(location to properties)
     }
 }
+
+/**
+ * A convenience method for creating a [Configuration] as an inline expression.
+ */
+@JvmName("ConfigurationMapFromPropertyNames")
+fun ConfigurationMap(vararg entries: Pair<String, String>, location: Location = Location.INTRINSIC) =
+    ConfigurationMap(entries.toMap(), location)
+
+/**
+ * A convenience method for creating a [Configuration] as an inline expression.
+ */
+@JvmName("ConfigurationMapFromKeys")
+fun ConfigurationMap(vararg entries: Pair<Key<*>, String>, location: Location = Location.INTRINSIC) =
+    ConfigurationMap(entries.map { (key, value) -> key.name to value }.toMap(), location)
 
 /**
  * Configuration looked up in the environment variables of the process.
@@ -224,22 +232,21 @@ class ConfigurationMap(private val properties: Map<String, String>, public overr
  */
 class EnvironmentVariables(val prefix: String = "",
                            private val lookup: (String) -> String? = System::getenv,
-                           private val all: ()->Map<String,String> = System::getenv)
-    : Configuration
-{
+                           private val all: () -> Map<String, String> = System::getenv)
+    : Configuration {
     val location = Location("environment variables")
-
+    
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { name ->
         val envvar = toEnvironmentVariable(name)
         PropertyLocation(key, location, envvar) to lookup(envvar)
     }
-
+    
     override fun searchPath(key: Key<*>) =
-            listOf(PropertyLocation(key, location, toEnvironmentVariable(key.name)))
-
+        listOf(PropertyLocation(key, location, toEnvironmentVariable(key.name)))
+    
     override fun list(): List<Pair<Location, Map<String, String>>> =
-            listOf(location to all().filterKeys { it.startsWith(prefix) })
-
+        listOf(location to all().filterKeys { it.startsWith(prefix) })
+    
     private fun toEnvironmentVariable(name: String) = prefix + name.toUpperCase().replace(nonAlphaNumericCharacters, "_")
     
     companion object : Configuration by EnvironmentVariables()
@@ -252,9 +259,9 @@ private val nonAlphaNumericCharacters = Regex("[^A-Za-z0-9]")
  */
 class Override(val override: Configuration, val fallback: Configuration) : Configuration {
     override fun searchPath(key: Key<*>) = override.searchPath(key) + fallback.searchPath(key)
-
+    
     override fun <T> getOrNull(key: Key<T>) = override.getOrNull(key) ?: fallback.getOrNull(key)
-
+    
     override fun list() = override.list() + fallback.list()
 }
 
@@ -273,14 +280,14 @@ fun search(first: Configuration, vararg rest: Configuration) = rest.fold(first, 
  */
 class Subset(namePrefix: String, private val configuration: Configuration) : Configuration {
     private val prefix = namePrefix + "."
-
+    
     override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(prefixed(key))
-
+    
     override fun contains(key: Key<*>) = configuration.contains(prefixed(key))
-
+    
     override fun searchPath(key: Key<*>) = configuration.searchPath(prefixed(key))
-
-    override fun list() = configuration.list().map { it.first to it.second.filterKeys{ k -> k.startsWith(prefix) } }
-
+    
+    override fun list() = configuration.list().map { it.first to it.second.filterKeys { k -> k.startsWith(prefix) } }
+    
     private fun <T> prefixed(key: Key<T>) = key.copy(name = prefix + key.name)
 }
