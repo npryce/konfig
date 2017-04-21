@@ -5,7 +5,7 @@ println "building version ${version}"
 
 
 buildscript {
-    ext.kotlin_version = '1.0.5'
+    ext.kotlin_version = '1.1.1'
     repositories {
         mavenCentral()
         jcenter()
@@ -30,8 +30,9 @@ dependencies {
     compileOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile 'junit:junit:4.12'
-    testCompile 'com.natpryce:hamkrest:1.1.0.0'
+    testCompile 'com.natpryce:hamkrest:1.4.0.0'
 }
 
 jar {
