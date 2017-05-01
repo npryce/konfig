@@ -67,8 +67,7 @@ data class PropertyLocation(val key: Key<*>, val source: Location, val nameInLoc
 interface Configuration {
     /**
      * Look up a property value identified by [key], or throw [Misconfiguration] if there is no definition of the
-     * property.  Implementations can override [missingPropertyMessage] to provide a more detailed error message
-     * for the exception.
+     * property.
      */
     @Throws(Misconfiguration::class)
     operator fun <T> get(key: Key<T>): T = getOrElse(key) { key -> throw Misconfiguration(missingPropertyMessage(key)) }
@@ -129,8 +128,10 @@ abstract class LocatedConfiguration : Configuration {
 /**
  * Configuration stored in a [Properties] object.
  */
-class ConfigurationProperties(private val properties: Properties, override val location: Location = Location.INTRINSIC) :
-    LocatedConfiguration() {
+class ConfigurationProperties(
+    private val properties: Properties,
+    override val location: Location = Location.INTRINSIC
+) : LocatedConfiguration() {
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { name ->
         PropertyLocation(key, location, name) to properties.getProperty(name)
     }
@@ -193,7 +194,10 @@ class ConfigurationProperties(private val properties: Properties, override val l
 /**
  * Configuration stored in a map.
  */
-class ConfigurationMap(private val properties: Map<String, String>, public override val location: Location = Location.INTRINSIC) :
+class ConfigurationMap(
+    private val properties: Map<String, String>,
+    override val location: Location = Location.INTRINSIC
+) :
     LocatedConfiguration() {
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { location(key) to properties[key.name] }
     
@@ -220,6 +224,16 @@ fun ConfigurationMap(vararg entries: Pair<String, String>, location: Location = 
 fun ConfigurationMap(vararg entries: Pair<Key<*>, String>, location: Location = Location.INTRINSIC) =
     ConfigurationMap(entries.map { (key, value) -> key.name to value }.toMap(), location)
 
+object EmptyConfiguration : Configuration {
+    override fun <T> get(key: Key<T>) = throw Misconfiguration(missingPropertyMessage(key))
+    override fun <T> getOrElse(key: Key<T>, default: T) = default
+    override fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T) = default(key)
+    override fun <T> getOrNull(key: Key<T>) = null
+    override fun contains(key: Key<*>) = false
+    override fun list() = emptyList<Pair<Location, Map<String, String>>>()
+    override fun searchPath(key: Key<*>) = emptyList<PropertyLocation>()
+}
+
 /**
  * Configuration looked up in the environment variables of the process.
  *
@@ -230,10 +244,11 @@ fun ConfigurationMap(vararg entries: Pair<Key<*>, String>, location: Location = 
  * translated to "APP_DB_PASSWORD".
  *
  */
-class EnvironmentVariables(val prefix: String = "",
-                           private val lookup: (String) -> String? = System::getenv,
-                           private val all: () -> Map<String, String> = System::getenv)
-    : Configuration {
+class EnvironmentVariables(
+    val prefix: String = "",
+    private val lookup: (String) -> String? = System::getenv,
+    private val all: () -> Map<String, String> = System::getenv
+) : Configuration {
     val location = Location("environment variables")
     
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { name ->
@@ -257,7 +272,10 @@ private val nonAlphaNumericCharacters = Regex("[^A-Za-z0-9]")
 /**
  * Looks up configuration in [override] and, if the property is not defined there, looks it up in [fallback].
  */
-class Override(val override: Configuration, val fallback: Configuration) : Configuration {
+class Override(
+    val override: Configuration,
+    val fallback: Configuration
+) : Configuration {
     override fun searchPath(key: Key<*>) = override.searchPath(key) + fallback.searchPath(key)
     
     override fun <T> getOrNull(key: Key<T>) = override.getOrNull(key) ?: fallback.getOrNull(key)
@@ -278,7 +296,10 @@ fun search(first: Configuration, vararg rest: Configuration) = rest.fold(first, 
  * For example, if initialised with a [namePrefix] of "db", a look up with a key named "password" would be
  * delegated to [configuration] as a look up for "db.password".
  */
-class Subset(namePrefix: String, private val configuration: Configuration) : Configuration {
+class Subset(
+    namePrefix: String,
+    private val configuration: Configuration
+) : Configuration {
     private val prefix = namePrefix + "."
     
     override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(prefixed(key))
