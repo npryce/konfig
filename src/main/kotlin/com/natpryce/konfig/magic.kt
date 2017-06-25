@@ -1,7 +1,7 @@
 package com.natpryce.konfig
 
 import kotlin.reflect.KProperty
-import kotlin.reflect.memberProperties
+import kotlin.reflect.full.memberProperties
 
 
 open class PropertyKeys : Iterable<Key<*>> {

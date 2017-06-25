@@ -3,7 +3,9 @@ package com.natpryce.konfig
 
 import java.io.OutputStream
 import java.io.PrintWriter
-import java.util.*
+import java.util.ArrayList
+import java.util.HashMap
+import kotlin.system.exitProcess
 
 data class CommandLineOption(
         val configKey: Key<*>,
@@ -59,7 +61,7 @@ private class CommandLineConfiguration(allOptions: List<CommandLineOption>,
 fun parseArgs(args: Array<String>,
               vararg options: CommandLineOption,
               helpOutput: OutputStream = System.err,
-              helpExit: () -> Nothing = { System.exit(0) as Nothing },
+              helpExit: () -> Nothing = { exitProcess(0)  },
               programName: String = "<program>",
               argMetavar: String = "FILE"):
         Pair<Configuration, List<String>>

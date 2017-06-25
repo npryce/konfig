@@ -70,7 +70,7 @@ interface Configuration {
      * property.
      */
     @Throws(Misconfiguration::class)
-    operator fun <T> get(key: Key<T>): T = getOrElse(key) { key -> throw Misconfiguration(missingPropertyMessage(key)) }
+    operator fun <T> get(key: Key<T>): T = getOrElse(key) { throw Misconfiguration(missingPropertyMessage(it)) }
     
     /**
      * Look up a property value identified by [key], or return [default] with the key if there is no definition of the
