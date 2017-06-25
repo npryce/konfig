@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="com.natpryce.konfig in konfig" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+  <configuration default="false" name="All Tests" type="JUnit" factoryName="JUnit">
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
       <pattern>
         <option name="PATTERN" value="com.natpryce.konfig.*" />
