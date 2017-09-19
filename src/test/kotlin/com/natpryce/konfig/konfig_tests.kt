@@ -306,4 +306,18 @@ class FromResources {
         assertThat(config[a], equalTo(1))
         assertThat(config[b], equalTo("two"))
     }
+    @Test
+    fun can_load_from_optional_file() {
+        val config = ConfigurationProperties.fromOptionalFile(File("src/test/resources/com/natpryce/konfig/example.properties"))
+
+        assertThat(config[a], equalTo(1))
+        assertThat(config[b], equalTo("two"))
+    }
+
+    @Test
+    fun should_return_empty_config_when_load_from_optional_file_thats_not_present() {
+        val config = ConfigurationProperties.fromOptionalFile(File("not.available.file"))
+
+        assertThat(config, equalTo<Configuration>(EmptyConfiguration))
+    }
 }
