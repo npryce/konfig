@@ -47,19 +47,21 @@ tasks {
             println("${descriptor.className?.substring("com.natpryce.konfig.".length)}: ${descriptor.name.replace("_", " ")}")
         })
 
-        afterTest(closureOf { descriptor: TestDescriptor, result: TestResult ->
+        afterTest(closureOf { _: TestDescriptor, result: TestResult ->
             println(" -> ${result.resultType}")
         })
     }
 
-    create("ossrhAuthentication") {
+    val ossrhAuthentication by creating {
         if (!(hasProperty("ossrh.username") && hasProperty("ossrh.password"))) {
             throw InvalidUserDataException("no OSSRH username and/or password!")
         }
     }
 
+    val dokka by creating {}
+
     "uploadArchives"(Upload::class) {
-        dependsOn("ossrhAuthentication")
+        dependsOn(ossrhAuthentication)
 
         repositories {
             withConvention(MavenRepositoryHandlerConvention::class) {
@@ -83,7 +85,7 @@ tasks {
                             "url"("https://github.com/npryce/konfig")
 
                             "scm" {
-                                "connection"( "git@github.com:npryce/konfig.git")
+                                "connection"("git@github.com:npryce/konfig.git")
                                 "url"("https://github.com/npryce/konfig")
                             }
 
@@ -111,9 +113,6 @@ tasks {
                 }
             }
         }
-    }
-
-    create("dokka") {
     }
 }
 
