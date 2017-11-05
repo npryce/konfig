@@ -1,12 +1,25 @@
-apply {
-    from("groovy.gradle")
+import org.jetbrains.dokka.gradle.DokkaTask
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.15")
+    }
 }
 
 plugins {
     kotlin("jvm") version "1.1.51"
     maven
     signing
-//    id("org.jetbrains.dokka") version "0.9.12"
+    //id("org.jetbrains.dokka") version "0.9.15"
+}
+
+apply {
+    from("groovy.gradle")
+    plugin("org.jetbrains.dokka")
 }
 
 group = "com.natpryce"
@@ -52,6 +65,11 @@ tasks {
         })
     }
 
+    val dokka = "dokka"(DokkaTask::class){
+        outputFormat = "javadoc"
+        outputDirectory = "build/javadoc"
+    }
+
     val ossrhAuthentication by creating {
         doLast {
             if (!(hasProperty("ossrh.username") && hasProperty("ossrh.password"))) {
@@ -59,8 +77,6 @@ tasks {
             }
         }
     }
-
-    val dokka by creating {}
 
     val sourcesJar by creating(Jar::class) {
         classifier = "sources"

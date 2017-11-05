@@ -1,12 +1,5 @@
 println "building version ${version}"
 
-/*
-dokka {
-    outputFormat 'javadoc'
-    outputDirectory 'build/javadoc'
-}
-*/
-
 signing {
     required { hasProperty("sign") || gradle.taskGraph.hasTask("uploadArchives") }
     sign configurations.archives
