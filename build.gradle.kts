@@ -53,12 +53,30 @@ tasks {
     }
 
     val ossrhAuthentication by creating {
-        if (!(hasProperty("ossrh.username") && hasProperty("ossrh.password"))) {
-            throw InvalidUserDataException("no OSSRH username and/or password!")
+        doLast {
+            if (!(hasProperty("ossrh.username") && hasProperty("ossrh.password"))) {
+                throw InvalidUserDataException("no OSSRH username and/or password!")
+            }
         }
     }
 
     val dokka by creating {}
+
+    val sourcesJar by creating(Jar::class) {
+        classifier = "sources"
+        from(java.sourceSets["main"].allSource)
+    }
+
+    val javaDoc by creating(Jar::class) {
+        dependsOn(dokka)
+        classifier = "javadoc"
+        from("build/javadoc")
+    }
+
+    artifacts {
+        add("archives", sourcesJar.archivePath)
+        add("archives", javaDoc.archivePath)
+    }
 
     "uploadArchives"(Upload::class) {
         dependsOn(ossrhAuthentication)

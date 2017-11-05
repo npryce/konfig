@@ -1,29 +1,11 @@
 println "building version ${version}"
 
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-artifacts {
-    archives sourcesJar
-}
-
 /*
 dokka {
     outputFormat 'javadoc'
     outputDirectory 'build/javadoc'
 }
 */
-
-task javadocJar(type: Jar, dependsOn: 'dokka') {
-    classifier 'javadoc'
-    from 'build/javadoc'
-}
-
-artifacts {
-    archives sourcesJar, javadocJar
-}
 
 signing {
     required { hasProperty("sign") || gradle.taskGraph.hasTask("uploadArchives") }
