@@ -11,6 +11,12 @@ group = "com.natpryce"
 version = property("-version") ?: "SNAPSHOT"
 
 dependencies {
+    compile(kotlin("stdlib"))
+    compile(kotlin("reflect"))
+
+    testCompile(kotlin("test"))
+    testCompile("junit", "junit", "4.+")
+    testCompile("com.natpryce", "hamkrest", "1.+")
 }
 
 
