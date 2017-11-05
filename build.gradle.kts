@@ -35,7 +35,27 @@ tasks {
         ))
     }
 
-    create("dokka"){
+    "test"(Test::class) {
+        include("com/natpryce/konfig/**")
+        isScanForTestClasses = true
+        reports {
+            junitXml.isEnabled = true
+            html.isEnabled = true
+        }
+
+        beforeTest(closureOf { descriptor: TestDescriptor ->
+            println("${descriptor.className?.substring("com.natpryce.konfig.".length)}: ${descriptor.name.replace("_", " ")}")
+        })
+
+        afterTest(closureOf { descriptor: TestDescriptor, result: TestResult ->
+            println(" -> ${result.resultType}")
+        })
+    }
+
+    create("dokka") {
 
     }
 }
+
+fun <T : Any, U : Any> Any.closureOf(action: (T) -> U) = KotlinClosure1(action, this, this)
+fun <T : Any, U : Any, V: Any> Any.closureOf(action: (T, U) -> V) = KotlinClosure2(action, this, this)

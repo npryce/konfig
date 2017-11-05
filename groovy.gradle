@@ -21,22 +21,6 @@ task javadocJar(type: Jar, dependsOn: 'dokka') {
     from 'build/javadoc'
 }
 
-test {
-    include 'com/natpryce/konfig/**'
-    scanForTestClasses true
-    reports {
-        junitXml.enabled = true
-        html.enabled = true
-    }
-
-    beforeTest { desc ->
-        print "${desc.className.substring("com.natpryce.konfig.".length())}: ${desc.name.replace("_", " ")}"
-    }
-    afterTest { desc, result ->
-        println " -> ${result.resultType}"
-    }
-}
-
 artifacts {
     archives sourcesJar, javadocJar
 }
