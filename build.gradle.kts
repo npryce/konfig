@@ -3,7 +3,7 @@ apply {
 }
 
 plugins {
-    kotlin("jvm") version "1.1.3"
+    kotlin("jvm") version "1.1.51"
     maven
     signing
 //    id("org.jetbrains.dokka") version "0.9.12"
