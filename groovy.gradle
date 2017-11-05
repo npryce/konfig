@@ -1,6 +1,0 @@
-println "building version ${version}"
-
-signing {
-    required { hasProperty("sign") || gradle.taskGraph.hasTask("uploadArchives") }
-    sign configurations.archives
-}

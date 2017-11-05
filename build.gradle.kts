@@ -1,5 +1,6 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 
+//TODO: remove this manual plugin definition once https://github.com/Kotlin/dokka/issues/146 has been addressed
 buildscript {
     repositories {
         jcenter()
@@ -9,17 +10,16 @@ buildscript {
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.15")
     }
 }
-
-plugins {
-    kotlin("jvm") version "1.1.51"
-    maven
-    signing
-    //id("org.jetbrains.dokka") version "0.9.15"
+apply {
+    plugin("org.jetbrains.dokka")
 }
 
-apply {
-    from("groovy.gradle")
-    plugin("org.jetbrains.dokka")
+plugins {
+    maven
+    signing
+    kotlin("jvm") version "1.1.51"
+    //TODO: Reenable
+    //id("org.jetbrains.dokka") version "0.9.15"
 }
 
 group = "com.natpryce"
@@ -30,16 +30,40 @@ dependencies {
     compile(kotlin("reflect"))
 
     testCompile(kotlin("test"))
-    testCompile("junit", "junit", "4.+")
-    testCompile("com.natpryce", "hamkrest", "1.+")
+    testCompile("junit", "junit", "4.12")
+    testCompile("com.natpryce", "hamkrest", "1.4.2.2")
 }
 
 repositories {
-    mavenCentral()
     jcenter()
 }
 
 tasks {
+    /*
+     * Custom tasks
+     */
+    // Dokka tasks for Kotlin documentation
+    val dokka = "dokka"(DokkaTask::class) {
+        outputFormat = "javadoc"
+        outputDirectory = "$buildDir/javadoc"
+    }
+
+    // Task generating the Javadoc for the project
+    val javaDoc by creating(Jar::class) {
+        dependsOn(dokka)
+        classifier = "javadoc"
+        from("$buildDir/javadoc")
+    }
+
+    // Task to generate sources for the project
+    val sourcesJar by creating(Jar::class) {
+        classifier = "sources"
+        from(java.sourceSets["main"].allSource)
+    }
+
+    /*
+     * Existing tasks configuration
+     */
     "jar"(Jar::class) {
         manifest.attributes.putAll(mapOf(
                 "Implementation-Title" to "konfig",
@@ -65,42 +89,13 @@ tasks {
         })
     }
 
-    val dokka = "dokka"(DokkaTask::class){
-        outputFormat = "javadoc"
-        outputDirectory = "build/javadoc"
-    }
-
-    val ossrhAuthentication by creating {
-        doLast {
+    val uploadArchives = "uploadArchives"(Upload::class) {
+        doFirst {
+            // Check that we have our credentials before doing anything
             if (!(hasProperty("ossrh.username") && hasProperty("ossrh.password"))) {
                 throw InvalidUserDataException("no OSSRH username and/or password!")
             }
         }
-    }
-
-    val sourcesJar by creating(Jar::class) {
-        classifier = "sources"
-        from(java.sourceSets["main"].allSource)
-    }
-
-    val javaDoc by creating(Jar::class) {
-        dependsOn(dokka)
-        classifier = "javadoc"
-        from("build/javadoc")
-    }
-
-    val wrapper by creating(Wrapper::class){
-        gradleVersion = "4.3"
-        distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
-    }
-
-    artifacts {
-        add("archives", sourcesJar.archivePath)
-        add("archives", javaDoc.archivePath)
-    }
-
-    "uploadArchives"(Upload::class) {
-        dependsOn(ossrhAuthentication)
 
         repositories {
             withConvention(MavenRepositoryHandlerConvention::class) {
@@ -147,11 +142,24 @@ tasks {
                             }
                         }
                     }
-
-                    pom { withGroovyBuilder { } }
                 }
             }
         }
+    }
+
+    "wrapper"(Wrapper::class) {
+        gradleVersion = "4.3"
+        distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
+    }
+
+    artifacts {
+        add("archives", sourcesJar)
+        add("archives", javaDoc)
+    }
+
+    signing {
+        isRequired = hasProperty("sign")// || gradle.taskGraph.hasTask(uploadArchives)
+        sign(configurations["archives"])
     }
 }
 
