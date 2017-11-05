@@ -21,8 +21,21 @@ dependencies {
     testCompile("com.natpryce", "hamkrest", "1.+")
 }
 
-
 repositories {
     mavenCentral()
     jcenter()
+}
+
+tasks {
+    "jar"(Jar::class) {
+        manifest.attributes.putAll(mapOf(
+                "Implementation-Title" to "konfig",
+                "Implementation-Vendor" to "com.natpryce",
+                "Implementation-Version" to version
+        ))
+    }
+
+    create("dokka"){
+
+    }
 }

@@ -1,13 +1,5 @@
 println "building version ${version}"
 
-jar {
-    manifest {
-        attributes 'Implementation-Title': 'konfig',
-                'Implementation-Vendor': 'com.natpryce',
-                'Implementation-Version': version
-    }
-}
-
 task sourcesJar(type: Jar) {
     classifier = 'sources'
     from sourceSets.main.allSource
