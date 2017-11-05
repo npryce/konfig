@@ -89,6 +89,11 @@ tasks {
         from("build/javadoc")
     }
 
+    val wrapper by creating(Wrapper::class){
+        gradleVersion = "4.3"
+        distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
+    }
+
     artifacts {
         add("archives", sourcesJar.archivePath)
         add("archives", javaDoc.archivePath)

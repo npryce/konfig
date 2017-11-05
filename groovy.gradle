@@ -4,9 +4,3 @@ signing {
     required { hasProperty("sign") || gradle.taskGraph.hasTask("uploadArchives") }
     sign configurations.archives
 }
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '4.3'
-    distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
-}
-
