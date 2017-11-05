@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.natpryce"
-version = property("-version") ?: "SNAPSHOT"
+version = findProperty("-version") ?: "SNAPSHOT"
 
 dependencies {
     compile(kotlin("stdlib"))
