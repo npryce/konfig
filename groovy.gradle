@@ -1,8 +1,5 @@
 println "building version ${version}"
 
-apply plugin: 'maven'
-apply plugin: 'signing'
-
 jar {
     manifest {
         attributes 'Implementation-Title': 'konfig',
