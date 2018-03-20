@@ -4,9 +4,14 @@ package com.natpryce.konfig
 
 import java.net.URI
 import java.net.URISyntaxException
-import java.time.*
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.Period
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.EnumSet
 
 sealed class ParseResult<T> {
     class Success<T>(val value: T) : ParseResult<T>()
@@ -117,8 +122,13 @@ private val defaultSeparator = Regex(",\\s*")
 
 fun <T> listType(elementType: (PropertyLocation, String) -> T, separator: Regex = defaultSeparator) =
     { p: PropertyLocation, s: String ->
-        s.split(separator).map { elementAsString -> elementType(p, elementAsString) }
+        s.split(separator).map { elementType(p, it) }
     }
+
+fun <T> setType(elementType: (PropertyLocation, String) -> T, separator: Regex = defaultSeparator): (PropertyLocation, String) -> Set<T> {
+    val listType = listType(elementType, separator)
+    return { p, s -> listType(p, s).toSet() }
+}
 
 
 inline fun <reified T:Any> temporalType(noinline fn: (String)->T) = propertyType(parser<T,DateTimeParseException>(fn))
