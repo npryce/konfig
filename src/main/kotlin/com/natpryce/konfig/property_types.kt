@@ -1,5 +1,3 @@
-@file:JvmName("PropertyTypes")
-
 package com.natpryce.konfig
 
 import java.net.URI
@@ -63,31 +61,26 @@ inline fun <reified T : Any> numericPropertyType(noinline parse: (String) -> T) 
 /**
  * The type of string properties
  */
-@JvmField
 val stringType = propertyType { ParseResult.Success(it) }
 
 /**
  * The type of Int properties
  */
-@JvmField
 val intType = numericPropertyType(String::toInt)
 
 /**
  * The type of Long properties
  */
-@JvmField
 val longType = numericPropertyType(String::toLong)
 
 /**
  * The type of Double properties
  */
-@JvmField
 val doubleType = numericPropertyType(String::toDouble)
 
 /**
  * The type of Boolean properties
  */
-@JvmField
 val booleanType = propertyType { ParseResult.Success(it.toBoolean()) }
 
 /**
@@ -114,7 +107,6 @@ inline fun <reified T : Enum<T>> enumType() = enumType(T::class.java)
 /**
  * The type of URI properties
  */
-@JvmField
 val uriType = propertyType(parser<URI, URISyntaxException>(::URI))
 
 
@@ -133,20 +125,15 @@ fun <T> setType(elementType: (PropertyLocation, String) -> T, separator: Regex =
 
 inline fun <reified T:Any> temporalType(noinline fn: (String)->T) = propertyType(parser<T,DateTimeParseException>(fn))
 
-@JvmField
 val durationType = temporalType(Duration::parse)
 
-@JvmField
 val periodType = temporalType(Period::parse)
 
-@JvmField
 val localTimeType = temporalType(LocalTime::parse)
 
-@JvmField
 val localDateType = temporalType(LocalDate::parse)
 
-@JvmField
 val localDateTimeType = temporalType(LocalDateTime::parse)
 
-@JvmField
 val instantType = temporalType(Instant::parse)
+
