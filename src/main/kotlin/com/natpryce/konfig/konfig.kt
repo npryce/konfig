@@ -90,7 +90,7 @@ interface Configuration {
      */
     fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T = getOrNull(key) ?: default(key)
     
-    fun contains(key: Key<*>) = getOrNull(key) != null
+    operator fun contains(key: Key<*>) = getOrNull(key) != null
     
     /**
      * Report the locations that will be searched for a configuration property, in priority order.  The value used
