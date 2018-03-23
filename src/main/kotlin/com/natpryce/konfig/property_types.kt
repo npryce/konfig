@@ -16,6 +16,8 @@ sealed class ParseResult<T> {
     class Failure<T>(val exception: Exception) : ParseResult<T>()
 }
 
+typealias PropertyType<T> = (PropertyLocation, String) -> T
+
 fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): (PropertyLocation, String) -> T {
     return { location, stringValue ->
         val parsed = parse(stringValue)
@@ -137,3 +139,5 @@ val localDateTimeType = temporalType(LocalDateTime::parse)
 
 val instantType = temporalType(Instant::parse)
 
+fun <T,U> PropertyType<T>.wrappedAs(wrapper: (T)->U): PropertyType<U> =
+    {location, stringValue -> wrapper(this@wrappedAs(location, stringValue)) }

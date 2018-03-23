@@ -316,3 +316,18 @@ class FromResources {
         assertThat(config[b], equalTo("two"))
     }
 }
+
+class Wrapping {
+    @Test
+    fun can_wrap_parsed_value() {
+        data class Example(val value: Int)
+    
+        val wrapperType = intType.wrappedAs(::Example)
+        val a = Key("a", wrapperType)
+        
+        val config = ConfigurationMap("a" to "1")
+        
+        assertThat(config[a], equalTo(Example(1)))
+    }
+    
+}
