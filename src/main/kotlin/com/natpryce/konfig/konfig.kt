@@ -11,7 +11,7 @@ import java.util.Properties
 /**
  * Error thrown when a mandatory property is missing
  */
-class Misconfiguration(message: String, cause: Exception? = null) : RuntimeException(message, cause)
+class Misconfiguration(override val message: String, cause: Exception? = null) : RuntimeException(message, cause)
 
 /**
  * A key that identifies a named, typed property and can convert a string representation into a value of the type.

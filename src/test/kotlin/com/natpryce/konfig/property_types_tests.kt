@@ -10,6 +10,8 @@ import com.natpryce.hamkrest.present
 import com.natpryce.hamkrest.throws
 import org.junit.Test
 import java.net.URI
+import java.time.ZoneId
+import java.util.TimeZone
 
 private fun <T> location(parser: (PropertyLocation, String) -> T) =
     PropertyLocation(Key("passed-property-key", parser), Location("source-location"), "property-key-in-source")
@@ -188,4 +190,29 @@ class ParsingSets {
             "1:2:3" to setOf(1, 2, 3)
         )
     }
+}
+
+
+class TimeZones {
+    @Test
+    fun `parse_named_time_zones`() {
+        assertParse(timeZoneIdType,
+            "Europe/London" to ZoneId.of("Europe/London")
+        )
+        assertParse(timeZoneType,
+            "Europe/London" to TimeZone.getTimeZone("Europe/London")
+        )
+    }
+    
+    @Test
+    fun `throws_misconfiguration_on_invalid_timezone_does_not_return_UTC`() {
+        val badTimezones = arrayOf("Foo/Bar",
+            "xxx",
+            "X",
+            "UTC+123123212313223")
+        
+        assertThrowsMisconfiguration(timeZoneIdType, *badTimezones)
+        assertThrowsMisconfiguration(timeZoneType, *badTimezones)
+    }
+    
 }
