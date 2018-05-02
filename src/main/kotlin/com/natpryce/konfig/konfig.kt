@@ -293,18 +293,27 @@ fun search(first: Configuration, vararg rest: Configuration) = rest.fold(first, 
  * delegated to [configuration] as a look up for "db.password".
  */
 class Subset(
-    namePrefix: String,
-    private val configuration: Configuration
+    private val configuration: Configuration,
+    namePrefix: String? = null,
+    nameSuffix: String? = null
 ) : Configuration {
-    private val prefix = namePrefix + "."
+    // For backward compatibility with previous versions
+    constructor(namePrefix: String, configuration: Configuration):
+        this(configuration, namePrefix = namePrefix)
     
-    override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(prefixed(key))
+    private val prefix = namePrefix?.let { "$it." } ?: ""
+    private val suffix = nameSuffix?.let { ".$it" } ?: ""
     
-    override fun contains(key: Key<*>) = configuration.contains(prefixed(key))
+    override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(full(key))
     
-    override fun searchPath(key: Key<*>) = configuration.searchPath(prefixed(key))
+    override fun contains(key: Key<*>) = configuration.contains(full(key))
     
-    override fun list() = configuration.list().map { it.first to it.second.filterKeys { k -> k.startsWith(prefix) } }
+    override fun searchPath(key: Key<*>) = configuration.searchPath(full(key))
     
-    private fun <T> prefixed(key: Key<T>) = key.copy(name = prefix + key.name)
+    override fun list() =
+        configuration.list().map { it.first to it.second.filterKeys { k ->
+            (prefix.isEmpty() || k.startsWith(prefix)) && (suffix.isEmpty() || k.endsWith(suffix)) }
+        }
+    
+    private fun <T> full(key: Key<T>) = key.copy(name = prefix + key.name + suffix)
 }

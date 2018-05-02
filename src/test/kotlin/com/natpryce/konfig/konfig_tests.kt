@@ -251,18 +251,25 @@ class ConfigSubset {
         "a.two" to "a2",
         "b.one" to "b1",
         "b.two" to "b2",
-        "b.three" to "b3")
+        "b.three" to "b3",
+        "a.x.b" to "axb")
     
-    val subsetA = Subset("a", fullSet)
-    val subsetB = Subset("b", fullSet)
     
     val key1 = Key("one", stringType)
     val key2 = Key("two", stringType)
     val key3 = Key("three", stringType)
     
+    val keyA = Key("a", stringType)
+    val keyB = Key("b", stringType)
+    
+    val keyX = Key("x", stringType)
+    
     
     @Test
-    fun subset_properties() {
+    fun prefixed_properties() {
+        val subsetA = Subset(namePrefix = "a", configuration = fullSet)
+        val subsetB = Subset(namePrefix = "b", configuration = fullSet)
+        
         assertThat(subsetA[key1], equalTo("a1"))
         assertThat(subsetA[key2], equalTo("a2"))
         
@@ -271,7 +278,30 @@ class ConfigSubset {
     }
     
     @Test
+    fun suffixed_properties() {
+        val subset1 = Subset(nameSuffix = "one", configuration = fullSet)
+        val subset2 = Subset(nameSuffix = "two", configuration = fullSet)
+        
+        assertThat(subset1[keyA], equalTo("a1"))
+        assertThat(subset2[keyA], equalTo("a2"))
+        
+        assertThat(subset1[keyB], equalTo("b1"))
+        assertThat(subset2[keyB], equalTo("b2"))
+    }
+    
+    @Test
+    fun suffixed_and_prefixed_properties() {
+        val subset1 = Subset(namePrefix = "a", nameSuffix = "b", configuration = fullSet)
+        
+        assertThat(subset1[keyX], equalTo("axb"))
+    }
+    
+    
+    @Test
     fun contains() {
+        val subsetA = Subset("a", fullSet)
+        val subsetB = Subset("b", fullSet)
+    
         assertTrue(fullSet.contains(Key("a.one", stringType)))
         assertTrue(fullSet.contains(Key("b.one", stringType)))
         
@@ -283,8 +313,15 @@ class ConfigSubset {
     }
     
     @Test
-    fun lists_only_those_variables_that_start_with_the_prefix() {
-        assertThat(subsetA.list(), equalTo(listOf(fullSet.location to mapOf("a.one" to "a1", "a.two" to "a2"))))
+    fun lists_only_properties_in_the_subset() {
+        assertThat("prefixed", Subset(fullSet, namePrefix = "a").list(), equalTo(listOf(
+            fullSet.location to mapOf("a.one" to "a1", "a.two" to "a2", "a.x.b" to "axb"))))
+        
+        assertThat("suffixed", Subset(fullSet, nameSuffix= "two").list(), equalTo(listOf(
+            fullSet.location to mapOf("a.two" to "a2", "b.two" to "b2"))))
+        
+        assertThat("pre/suff-ixed", Subset(fullSet, namePrefix = "a", nameSuffix= "b").list(), equalTo(listOf(
+            fullSet.location to mapOf("a.x.b" to "axb"))))
     }
 }
 
