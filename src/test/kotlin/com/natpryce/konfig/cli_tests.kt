@@ -90,6 +90,21 @@ class CommandLineParsing {
                 "-y" to "20"
         )))
     }
+    
+    @Test
+    fun reports_location_of_key_including_actual_option_used() {
+        val (config) = parseArgs(arrayOf("--opt-x=10", "-y", "20"),
+                CommandLineOption(optX),
+                CommandLineOption(optY, short = "y"))
+
+        assertThat(config.list().single().second, equalTo(mapOf(
+                "--opt-x" to "10",
+                "-y" to "20"
+        )))
+        
+        assertThat(config.locationOf(optX)?.nameInLocation, equalTo("--opt-x"))
+        assertThat(config.locationOf(optY)?.nameInLocation, equalTo("-y"))
+    }
 
     private class Help : Exception()
 

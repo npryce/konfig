@@ -98,6 +98,12 @@ interface Configuration {
      */
     fun searchPath(key: Key<*>): List<PropertyLocation>
     
+    /**
+     * Report the location that has a value for the given configuration key, or null if a value for the key cannot be
+     * found.
+     */
+    fun locationOf(key: Key<*>): PropertyLocation?
+    
     fun list(): List<Pair<Location, Map<String, String>>>
     
 }
@@ -120,9 +126,15 @@ abstract class LocatedConfiguration : Configuration {
      * An implementation that works for a [Configuration] that is loaded from single source, and must be
      * overridden if the [Configuration] searches in multiple sources.
      */
-    override fun searchPath(key: Key<*>): List<PropertyLocation> = listOf(location(key))
+    override fun searchPath(key: Key<*>): List<PropertyLocation> = listOf(potentialLocationFor(key))
     
-    protected fun location(key: Key<*>) = PropertyLocation(key, location, key.name)
+    /**
+     * An implementation that works for a [Configuration] that is loaded from single source, and must be
+     * overridden if the [Configuration] searches in multiple sources.
+     */
+    override fun locationOf(key: Key<*>) = if (contains(key)) potentialLocationFor(key) else null
+    
+    protected fun potentialLocationFor(key: Key<*>) = PropertyLocation(key, location, key.name)
 }
 
 /**
@@ -183,7 +195,7 @@ class ConfigurationProperties(
             (input ?: throw Misconfiguration(errorMessageFn())).use {
                 ConfigurationProperties(Properties().apply { load(input) }, location)
             }
-
+        
         /**
          * Load from optional file
          */
@@ -201,7 +213,7 @@ class ConfigurationMap(
     override val location: Location = Location.INTRINSIC
 ) :
     LocatedConfiguration() {
-    override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { location(key) to properties[key.name] }
+    override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { potentialLocationFor(key) to properties[key.name] }
     
     override fun contains(key: Key<*>): Boolean {
         return key.name in properties
@@ -233,6 +245,7 @@ object EmptyConfiguration : Configuration {
     override fun <T> getOrNull(key: Key<T>) = null
     override fun contains(key: Key<*>) = false
     override fun list() = emptyList<Pair<Location, Map<String, String>>>()
+    override fun locationOf(key: Key<*>) = null
     override fun searchPath(key: Key<*>) = emptyList<PropertyLocation>()
 }
 
@@ -261,10 +274,16 @@ class EnvironmentVariables(
     override fun searchPath(key: Key<*>) =
         listOf(PropertyLocation(key, location, toEnvironmentVariable(key.name)))
     
+    override fun locationOf(key: Key<*>): PropertyLocation? {
+        val envvar = toEnvironmentVariable(key.name)
+        return lookup(envvar)?.let { PropertyLocation(key, location, envvar) }
+    }
+    
     override fun list(): List<Pair<Location, Map<String, String>>> =
         listOf(location to all().filterKeys { it.startsWith(prefix) })
     
-    private fun toEnvironmentVariable(name: String) = prefix + name.toUpperCase().replace(nonAlphaNumericCharacters, "_")
+    private fun toEnvironmentVariable(name: String) =
+        prefix + name.toUpperCase().replace(nonAlphaNumericCharacters, "_")
     
     companion object : Configuration by EnvironmentVariables()
 }
@@ -278,10 +297,10 @@ class Override(
     val override: Configuration,
     val fallback: Configuration
 ) : Configuration {
+    
     override fun searchPath(key: Key<*>) = override.searchPath(key) + fallback.searchPath(key)
-    
     override fun <T> getOrNull(key: Key<T>) = override.getOrNull(key) ?: fallback.getOrNull(key)
-    
+    override fun locationOf(key: Key<*>) = override.locationOf(key) ?: fallback.locationOf(key)
     override fun list() = override.list() + fallback.list()
 }
 
@@ -304,7 +323,7 @@ class Subset(
     nameSuffix: String? = null
 ) : Configuration {
     // For backward compatibility with previous versions
-    constructor(namePrefix: String, configuration: Configuration):
+    constructor(namePrefix: String, configuration: Configuration) :
         this(configuration, namePrefix = namePrefix)
     
     private val prefix = namePrefix?.let { "$it." } ?: ""
@@ -316,10 +335,12 @@ class Subset(
     
     override fun searchPath(key: Key<*>) = configuration.searchPath(full(key))
     
-    override fun list() =
-        configuration.list().map { it.first to it.second.filterKeys { k ->
-            (prefix.isEmpty() || k.startsWith(prefix)) && (suffix.isEmpty() || k.endsWith(suffix)) }
-        }
+    override fun locationOf(key: Key<*>) = if (keyIsInSubset(key.name)) configuration.locationOf(key) else null
+    
+    override fun list() = configuration.list().map { it.first to it.second.filterKeys(this::keyIsInSubset) }
+    
+    private fun keyIsInSubset(k: String) =
+        (prefix.isEmpty() || k.startsWith(prefix)) && (suffix.isEmpty() || k.endsWith(suffix))
     
     private fun <T> full(key: Key<T>) = key.copy(name = prefix + key.name + suffix)
 }

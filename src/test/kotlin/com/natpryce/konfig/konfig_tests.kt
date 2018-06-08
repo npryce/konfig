@@ -1,5 +1,6 @@
 package com.natpryce.konfig
 
+import com.natpryce.hamkrest.absent
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.containsSubstring
 import com.natpryce.hamkrest.equalTo
@@ -164,6 +165,7 @@ class OverridingAndFallingBack {
     val x = Key("x", stringType)
     val y = Key("y", stringType)
     val z = Key("z", stringType)
+    val nonexistent = Key("nonexistent", stringType)
     
     @Test
     fun overrides_default_properties() {
@@ -203,6 +205,15 @@ class OverridingAndFallingBack {
     fun lists_both_configurations_in_priority_order() {
         assertThat(config.list(), equalTo(overrides.list() + defaults.list()))
     }
+    
+    @Test
+    fun report_location_of_key() {
+        assertThat(config.locationOf(x), equalTo(overrides.locationOf(x)))
+        assertThat(config.locationOf(y), equalTo(defaults.locationOf(y)))
+        assertThat(config.locationOf(z), equalTo(overrides.locationOf(z)))
+        assertThat(config.locationOf(nonexistent), absent())
+    }
+    
 }
 
 class SearchConfigurationList {
