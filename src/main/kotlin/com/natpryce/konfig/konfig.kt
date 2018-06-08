@@ -183,6 +183,12 @@ class ConfigurationProperties(
             (input ?: throw Misconfiguration(errorMessageFn())).use {
                 ConfigurationProperties(Properties().apply { load(input) }, location)
             }
+
+        /**
+         * Load from optional file
+         */
+        @JvmStatic
+        fun fromOptionalFile(file: File) = if (file.exists()) fromFile(file) else EmptyConfiguration
     }
 }
 
