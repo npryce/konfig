@@ -90,8 +90,8 @@ Konfig has a few ways to reduce boilerplate code when defining configuration key
 1) You can use Kotlin's delgated property protocol to name keys after the constants that hold them:
 
     ```
-    val host by stringType
-    val port by intType
+    val host by stringType // defines a key named "host"
+    val port by intType    // defines a key named "port"
     
     ...
     
