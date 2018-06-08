@@ -81,6 +81,6 @@ Konfig's Configuration objects expect property names to follow Java property nam
 
 For example: `servers.file-storage.s3-api-key`, `servers.file-storage.s3-bucket`.
 
-Each Configuration implementation maps from that naming convetion to the convention used by the underlying configuration store. E.g. the EnvironmentVariables implementation maps Java property name convention to the upper-case-and-underscores convention used for Unix environment variables.
+Each Configuration implementation maps from that naming convetion to the convention used by the underlying configuration store. E.g. the `EnvironmentVariables` implementation maps Java property name convention to the upper-case-and-underscores convention used for Unix environment variables.
 
 Configuration is an interface and Key<T> is a data class. This makes it straight forward to write an implementation of Configuration that translates the names of keys to different naming conventions, if your configuration follows an unusual convention.
