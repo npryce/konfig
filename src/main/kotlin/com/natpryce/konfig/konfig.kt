@@ -50,6 +50,17 @@ data class Location(val description: String, val uri: URI? = null) {
          * or code that creates a [Configuration] object.
          */
         val INTRINSIC = Location("intrinsic")
+        
+        fun intrinsic(prefix: String = "intrinsic") =
+            Location(prefix + (callingStackFrame()?.let { ": $it" } ?: ""))
+        
+        private fun callingStackFrame() =
+            Thread.currentThread().stackTrace.firstOrNull { !isLibraryFunction(it) }
+        
+        private fun isLibraryFunction(it: StackTraceElement) =
+            it.className.startsWith("com.natpryce.konfig.") ||
+                it.className.startsWith("kotlin.") ||
+                it.className.startsWith("java.")
     }
 }
 
@@ -142,7 +153,7 @@ abstract class LocatedConfiguration : Configuration {
  */
 class ConfigurationProperties(
     private val properties: Properties,
-    override val location: Location = Location.INTRINSIC
+    override val location: Location = Location.intrinsic()
 ) : LocatedConfiguration() {
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { name ->
         PropertyLocation(key, location, name) to properties.getProperty(name)
@@ -210,7 +221,7 @@ class ConfigurationProperties(
  */
 class ConfigurationMap(
     private val properties: Map<String, String>,
-    override val location: Location = Location.INTRINSIC
+    override val location: Location = Location.intrinsic()
 ) :
     LocatedConfiguration() {
     override fun <T> getOrNull(key: Key<T>) = key.getOrNullBy { potentialLocationFor(key) to properties[key.name] }
@@ -228,14 +239,14 @@ class ConfigurationMap(
  * A convenience method for creating a [Configuration] as an inline expression.
  */
 @JvmName("ConfigurationMapFromPropertyNames")
-fun ConfigurationMap(vararg entries: Pair<String, String>, location: Location = Location.INTRINSIC) =
+fun ConfigurationMap(vararg entries: Pair<String, String>, location: Location = Location.intrinsic()) =
     ConfigurationMap(entries.toMap(), location)
 
 /**
  * A convenience method for creating a [Configuration] as an inline expression.
  */
 @JvmName("ConfigurationMapFromKeys")
-fun ConfigurationMap(vararg entries: Pair<Key<*>, String>, location: Location = Location.INTRINSIC) =
+fun ConfigurationMap(vararg entries: Pair<Key<*>, String>, location: Location = Location.intrinsic()) =
     ConfigurationMap(entries.map { (key, value) -> key.name to value }.toMap(), location)
 
 object EmptyConfiguration : Configuration {

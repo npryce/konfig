@@ -1,4 +1,4 @@
-package com.natpryce.konfig
+package com.natpryce.unittests.konfig
 
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
@@ -8,6 +8,23 @@ import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.has
 import com.natpryce.hamkrest.present
 import com.natpryce.hamkrest.throws
+import com.natpryce.konfig.Key
+import com.natpryce.konfig.Location
+import com.natpryce.konfig.Misconfiguration
+import com.natpryce.konfig.PropertyLocation
+import com.natpryce.konfig.booleanType
+import com.natpryce.konfig.doubleType
+import com.natpryce.konfig.enumType
+import com.natpryce.konfig.intType
+import com.natpryce.konfig.listType
+import com.natpryce.konfig.longType
+import com.natpryce.konfig.setType
+import com.natpryce.konfig.timeZoneIdType
+import com.natpryce.konfig.timeZoneType
+import com.natpryce.konfig.uriType
+import com.natpryce.unittests.konfig.ParsingEnumeratedValues.E.A
+import com.natpryce.unittests.konfig.ParsingEnumeratedValues.E.B
+import com.natpryce.unittests.konfig.ParsingEnumeratedValues.E.C
 import org.junit.Test
 import java.net.URI
 import java.time.ZoneId
@@ -123,12 +140,12 @@ class ParsingEnumeratedValues {
     @Test
     fun parse_enums_by_name_and_value() {
         val theType = enumType("foo" to 1, "bar" to 2, "baz" to 3)
-        
+    
         assertParse(theType,
             "foo" to 1,
             "bar" to 2,
             "baz" to 3)
-        
+    
         assertThrowsMisconfiguration(theType, "xxx")
     }
     
@@ -136,17 +153,17 @@ class ParsingEnumeratedValues {
     
     @Test
     fun parse_enums_by_elements_of_an_enum_type() {
-        val typeFromVarargs = enumType(E.A, E.B, E.C)
+        val typeFromVarargs = enumType(A, B, C)
         val typeFromArray = enumType(*E.values())
-        val typeFromIterable = enumType(setOf(E.A, E.B, E.C))
+        val typeFromIterable = enumType(setOf(A, B, C))
         val typeFromJavaClass = enumType(E::class.java)
         
         for (theType in listOf(typeFromVarargs, typeFromArray, typeFromIterable, typeFromJavaClass)) {
             assertParse(theType,
-                "A" to E.A,
-                "B" to E.B,
-                "C" to E.C)
-            
+                "A" to A,
+                "B" to B,
+                "C" to C)
+    
             assertThrowsMisconfiguration(theType, "xxx")
             assertThrowsMisconfiguration(theType, "a")
             assertThrowsMisconfiguration(theType, "b")
@@ -210,7 +227,7 @@ class TimeZones {
             "xxx",
             "X",
             "UTC+123123212313223")
-        
+    
         assertThrowsMisconfiguration(timeZoneIdType, *badTimezones)
         assertThrowsMisconfiguration(timeZoneType, *badTimezones)
     }

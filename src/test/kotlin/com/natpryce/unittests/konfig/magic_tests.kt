@@ -1,7 +1,15 @@
-package com.natpryce.konfig
+package com.natpryce.unittests.konfig
 
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
+import com.natpryce.konfig.Key
+import com.natpryce.konfig.PropertyGroup
+import com.natpryce.konfig.PropertyKeys
+import com.natpryce.konfig.getValue
+import com.natpryce.konfig.intType
+import com.natpryce.konfig.stringType
+import com.natpryce.unittests.konfig.StaticallyTypedConfigKeys.outer.inner
+import com.natpryce.unittests.konfig.StaticallyTypedConfigKeys.outer3.x
 import org.junit.Test
 
 val foo by stringType
@@ -56,7 +64,7 @@ class StaticallyTypedConfigKeys {
 
     @Test
     fun nested_groups_with_nesting_defined_explicitly() {
-        assertThat(outer.inner.p.name, equalTo("outer.inner.p"))
+        assertThat(inner.p.name, equalTo("outer.inner.p"))
     }
 
     object outer2 : PropertyGroup() {
@@ -80,7 +88,7 @@ class StaticallyTypedConfigKeys {
 
     @Test
     fun common_property_definition_as_a_singleton_object() {
-        assertThat(outer3.x.a.name, equalTo("outer3.x.a"))
+        assertThat(x.a.name, equalTo("outer3.x.a"))
     }
 }
 
@@ -107,12 +115,12 @@ class IntrospectionOfMagicPropertyKeys {
     @Test
     fun introspection() {
         assertThat(keys.toList(), equalTo(listOf<Key<*>>(
-                Key("p", intType),
-                Key("g.q", stringType),
-                Key("g.a.a1", stringType),
-                Key("g.a.a2", stringType),
-                Key("g.b.b1", stringType),
-                Key("g.b.b2", stringType)
+            Key("p", intType),
+            Key("g.q", stringType),
+            Key("g.a.a1", stringType),
+            Key("g.a.a2", stringType),
+            Key("g.b.b1", stringType),
+            Key("g.b.b2", stringType)
         )))
     }
 }

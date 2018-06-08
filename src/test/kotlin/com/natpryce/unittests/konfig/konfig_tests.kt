@@ -1,10 +1,26 @@
-package com.natpryce.konfig
+package com.natpryce.unittests.konfig
 
 import com.natpryce.hamkrest.absent
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.containsSubstring
 import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.present
+import com.natpryce.hamkrest.startsWith
+import com.natpryce.konfig.Configuration
+import com.natpryce.konfig.ConfigurationMap
+import com.natpryce.konfig.ConfigurationProperties
+import com.natpryce.konfig.EmptyConfiguration
+import com.natpryce.konfig.EnvironmentVariables
+import com.natpryce.konfig.Key
+import com.natpryce.konfig.Location
+import com.natpryce.konfig.Misconfiguration
+import com.natpryce.konfig.PropertyLocation
+import com.natpryce.konfig.Subset
+import com.natpryce.konfig.intType
+import com.natpryce.konfig.overriding
+import com.natpryce.konfig.search
+import com.natpryce.konfig.stringType
+import com.natpryce.konfig.wrappedAs
 import org.junit.Test
 import java.io.File
 import java.util.Properties
@@ -312,7 +328,7 @@ class ConfigSubset {
     fun contains() {
         val subsetA = Subset("a", fullSet)
         val subsetB = Subset("b", fullSet)
-    
+        
         assertTrue(fullSet.contains(Key("a.one", stringType)))
         assertTrue(fullSet.contains(Key("b.one", stringType)))
         
@@ -328,10 +344,10 @@ class ConfigSubset {
         assertThat("prefixed", Subset(fullSet, namePrefix = "a").list(), equalTo(listOf(
             fullSet.location to mapOf("a.one" to "a1", "a.two" to "a2", "a.x.b" to "axb"))))
         
-        assertThat("suffixed", Subset(fullSet, nameSuffix= "two").list(), equalTo(listOf(
+        assertThat("suffixed", Subset(fullSet, nameSuffix = "two").list(), equalTo(listOf(
             fullSet.location to mapOf("a.two" to "a2", "b.two" to "b2"))))
         
-        assertThat("pre/suff-ixed", Subset(fullSet, namePrefix = "a", nameSuffix= "b").list(), equalTo(listOf(
+        assertThat("pre/suff-ixed", Subset(fullSet, namePrefix = "a", nameSuffix = "b").list(), equalTo(listOf(
             fullSet.location to mapOf("a.x.b" to "axb"))))
     }
 }
@@ -350,7 +366,7 @@ class FromResources {
     
     @Test
     fun can_load_from_absolute_resource() {
-        val config = ConfigurationProperties.fromResource("com/natpryce/konfig/example.properties")
+        val config = ConfigurationProperties.fromResource("com/natpryce/unittests/konfig/example.properties")
         
         assertThat(config[a], equalTo(1))
         assertThat(config[b], equalTo("two"))
@@ -358,24 +374,24 @@ class FromResources {
     
     @Test
     fun can_load_from_file() {
-        val config = ConfigurationProperties.fromFile(File("src/test/resources/com/natpryce/konfig/example.properties"))
+        val config = ConfigurationProperties.fromFile(File("src/test/resources/com/natpryce/unittests/konfig/example.properties"))
         
         assertThat(config[a], equalTo(1))
         assertThat(config[b], equalTo("two"))
     }
-  
+    
     @Test
     fun can_load_from_optional_file() {
-        val config = ConfigurationProperties.fromOptionalFile(File("src/test/resources/com/natpryce/konfig/example.properties"))
-
+        val config = ConfigurationProperties.fromOptionalFile(File("src/test/resources/com/natpryce/unittests/konfig/example.properties"))
+        
         assertThat(config[a], equalTo(1))
         assertThat(config[b], equalTo("two"))
     }
-
+    
     @Test
     fun should_return_empty_config_when_load_from_optional_file_thats_not_present() {
         val config = ConfigurationProperties.fromOptionalFile(File("not.available.file"))
-
+        
         assertThat(config, equalTo<Configuration>(EmptyConfiguration))
     }
 }
@@ -384,7 +400,7 @@ class Wrapping {
     @Test
     fun can_wrap_parsed_value() {
         data class Example(val value: Int)
-    
+        
         val wrapperType = intType.wrappedAs(::Example)
         val a = Key("a", wrapperType)
         
@@ -392,4 +408,17 @@ class Wrapping {
         
         assertThat(config[a], equalTo(Example(1)))
     }
-   }
+}
+
+
+class IntrinsicLocation {
+    @Test
+    fun reports_caller_as_intrinsic_location() {
+        val l = Location.intrinsic()
+        
+        assertThat("ignores calls to Java stdlib functions", l.description, !startsWith("intrinsic: java."))
+        assertThat("ignores calls to Kotlin stdlib functions", l.description, !startsWith("intrinsic: kotlin."))
+        assertThat("ignores calls to Konfig functions", l.description, !startsWith("intrinsic: com.natpryce.konfig."))
+    }
+    
+}

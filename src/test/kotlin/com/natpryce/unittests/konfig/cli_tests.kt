@@ -1,10 +1,17 @@
-package com.natpryce.konfig
+package com.natpryce.unittests.konfig
 
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.containsSubstring
 import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.present
 import com.natpryce.hamkrest.throws
+import com.natpryce.konfig.CommandLineOption
+import com.natpryce.konfig.ConfigurationMap
+import com.natpryce.konfig.Key
+import com.natpryce.konfig.Misconfiguration
+import com.natpryce.konfig.overriding
+import com.natpryce.konfig.parseArgs
+import com.natpryce.konfig.stringType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -27,7 +34,7 @@ class CommandLineParsing {
     @Test
     fun one_long_option_with_separator() {
         val (config, args) = parseArgs(arrayOf("--opt-x=bar", "baz"),
-                CommandLineOption(optX))
+            CommandLineOption(optX))
 
         assertThat(config[optX], equalTo("bar"))
         assertThat(args, equalTo(listOf("baz")))
@@ -36,7 +43,7 @@ class CommandLineParsing {
     @Test
     fun one_long_option_as_two_args() {
         val (config, args) = parseArgs(arrayOf("--opt-x", "bar", "baz"),
-                CommandLineOption(optX))
+            CommandLineOption(optX))
 
         assertThat(config[optX], equalTo("bar"))
         assertThat(args, equalTo(listOf("baz")))
@@ -45,7 +52,7 @@ class CommandLineParsing {
     @Test
     fun one_short_option() {
         val (config, args) = parseArgs(arrayOf("-x", "bar", "baz"),
-                CommandLineOption(optX, short = "x"))
+            CommandLineOption(optX, short = "x"))
 
         assertThat(config[optX], equalTo("bar"))
         assertThat(args, equalTo(listOf("baz")))
@@ -66,13 +73,13 @@ class CommandLineParsing {
     @Test
     fun defaults() {
         val opts = arrayOf(
-                CommandLineOption(optX),
-                CommandLineOption(optY))
+            CommandLineOption(optX),
+            CommandLineOption(optY))
 
         val (config, files) = parseArgs(arrayOf("--opt-x=cli-x", "a-file"), *opts) overriding
-                ConfigurationMap(
-                        "opt.x" to "default-x",
-                        "opt.y" to "default-y")
+            ConfigurationMap(
+                "opt.x" to "default-x",
+                "opt.y" to "default-y")
 
         assertThat(config[optX], equalTo("cli-x"))
         assertThat(config[optY], equalTo("default-y"))
@@ -82,8 +89,8 @@ class CommandLineParsing {
     @Test
     fun lists_options_set_from_command_line() {
         val (config) = parseArgs(arrayOf("--opt-x=10", "-y", "20"),
-                CommandLineOption(optX),
-                CommandLineOption(optY, short = "y"))
+            CommandLineOption(optX),
+            CommandLineOption(optY, short = "y"))
 
         assertThat(config.list().single().second, equalTo(mapOf(
                 "--opt-x" to "10",
@@ -94,8 +101,8 @@ class CommandLineParsing {
     @Test
     fun reports_location_of_key_including_actual_option_used() {
         val (config) = parseArgs(arrayOf("--opt-x=10", "-y", "20"),
-                CommandLineOption(optX),
-                CommandLineOption(optY, short = "y"))
+            CommandLineOption(optX),
+            CommandLineOption(optY, short = "y"))
 
         assertThat(config.list().single().second, equalTo(mapOf(
                 "--opt-x" to "10",
@@ -111,13 +118,13 @@ class CommandLineParsing {
     @Test
     fun reports_usage_if_passed_long_help_option() {
         val helpOutputBytes = ByteArrayOutputStream()
-
+    
         expectThrown<Help> {
             parseArgs(arrayOf("--opt-x=10", "-y", "20", "--help"),
-                    CommandLineOption(optX),
-                    CommandLineOption(optY, short = "y"),
-                    helpOutput = helpOutputBytes,
-                    helpExit = { throw Help() })
+                CommandLineOption(optX),
+                CommandLineOption(optY, short = "y"),
+                helpOutput = helpOutputBytes,
+                helpExit = { throw Help() })
         }
 
         assertEquals(
@@ -134,14 +141,14 @@ Options:
     @Test
     fun can_specify_program_name_and_arg_metavar() {
         val helpOutputBytes = ByteArrayOutputStream()
-
+    
         expectThrown<Help> {
             parseArgs(arrayOf("--help"),
-                    CommandLineOption(optX),
-                    programName = "the-program",
-                    argMetavar = "ARG",
-                    helpOutput = helpOutputBytes,
-                    helpExit = { throw Help() })
+                CommandLineOption(optX),
+                programName = "the-program",
+                argMetavar = "ARG",
+                helpOutput = helpOutputBytes,
+                helpExit = { throw Help() })
         }
 
         assertEquals("""Usage: the-program [options] ARG ...""", helpOutputBytes.toString().lines().first())
@@ -150,24 +157,24 @@ Options:
     @Test
     fun reports_usage_if_passed_short_help_option() {
         val helpOutputBytes = ByteArrayOutputStream()
-
+    
         expectThrown<Help> {
             parseArgs(arrayOf("-h"),
-                    CommandLineOption(optX),
-                    helpOutput = helpOutputBytes,
-                    helpExit = { throw Help() })
+                CommandLineOption(optX),
+                helpOutput = helpOutputBytes,
+                helpExit = { throw Help() })
         }
     }
 
     @Test
     fun can_specify_description_of_command_line_option() {
         val helpOutputBytes = ByteArrayOutputStream()
-
+    
         expectThrown<Help> {
             parseArgs(arrayOf("--help"),
-                    CommandLineOption(optX, description = "a descriptive description"),
-                    helpOutput = helpOutputBytes,
-                    helpExit = { throw Help() })
+                CommandLineOption(optX, description = "a descriptive description"),
+                helpOutput = helpOutputBytes,
+                helpExit = { throw Help() })
         }
 
         assertThat(helpOutputBytes.toString(), containsSubstring(" --opt-x=OPT-X  a descriptive description\n"))
@@ -176,12 +183,12 @@ Options:
     @Test
     fun can_specify_metavar_of_command_line_option() {
         val helpOutputBytes = ByteArrayOutputStream()
-
+    
         expectThrown<Help> {
             parseArgs(arrayOf("--help"),
-                    CommandLineOption(optX, short="x", metavar = "THE_X", description = "set the x"),
-                    helpOutput = helpOutputBytes,
-                    helpExit = { throw Help() })
+                CommandLineOption(optX, short = "x", metavar = "THE_X", description = "set the x"),
+                helpOutput = helpOutputBytes,
+                helpExit = { throw Help() })
         }
 
         assertThat(helpOutputBytes.toString(), containsSubstring(" -x THE_X, --opt-x=THE_X  set the x\n"))
@@ -190,7 +197,7 @@ Options:
     @Test
     fun reports_searched_location_when_property_not_defined() {
         val (config) = parseArgs(emptyArray(),
-                CommandLineOption(optX, long="xxx", short="y"))
+            CommandLineOption(optX, long = "xxx", short = "y"))
 
         try {
             config[optX]
@@ -204,7 +211,7 @@ Options:
     @Test
     fun reports_searched_location_when_only_long_option() {
         val (config) = parseArgs(emptyArray(),
-                CommandLineOption(optX))
+            CommandLineOption(optX))
 
         assertThat(config.searchPath(optX).map { it.nameInLocation }, equalTo(listOf("--opt-x")))
     }
@@ -212,7 +219,7 @@ Options:
     @Test
     fun reports_searched_location_when_long_and_short_option() {
         val (config) = parseArgs(emptyArray(),
-                CommandLineOption(optX, short="x"))
+            CommandLineOption(optX, short = "x"))
 
         assertThat(config.searchPath(optX).map { it.nameInLocation }, equalTo(listOf("-x", "--opt-x")))
     }
@@ -220,7 +227,7 @@ Options:
     @Test
     fun reports_searched_location_when_custom_long_and_short_option() {
         val (config) = parseArgs(emptyArray(),
-                CommandLineOption(optX, long="the-x", short="x"))
+            CommandLineOption(optX, long = "the-x", short = "x"))
 
         assertThat(config.searchPath(optX).map { it.nameInLocation }, equalTo(listOf("-x", "--the-x")))
     }
