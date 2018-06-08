@@ -62,8 +62,6 @@ To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com
     server.start()
     ```
 
-
-
 Konfig can load properties from:
 
 * Java property files and resources
@@ -75,3 +73,14 @@ Konfig can load properties from:
 Konfig can easily be extended with new property types and sources of configuration data.
 
 Konfig can report where configuration properties are searched for and where they were found.
+
+
+# Naming of Properties
+
+Konfig's Configuration objects expect property names to follow Java property name conventions: dots to represent hierarchy, lower-case identifiers within the hierarchy, hyphens to separate words in those identifiers. 
+
+For example: `servers.file-storage.s3-api-key`, `servers.file-storage.s3-bucket`.
+
+Each Configuration implementation maps from that naming convetion to the convention used by the underlying configuration store. E.g. the EnvironmentVariables implementation maps Java property name convention to the upper-case-and-underscores convention used for Unix environment variables.
+
+Configuration is an interface and Key<T> is a data class. This makes it straight forward to write an implementation of Configuration that translates the names of keys to different naming conventions, if your configuration follows an unusual convention.
