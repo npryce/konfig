@@ -1,17 +1,26 @@
-@file:JvmName("PropertyTypes")
-
 package com.natpryce.konfig
 
 import java.net.URI
 import java.net.URISyntaxException
-import java.time.*
+import java.time.DateTimeException
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.Period
+import java.time.ZoneId
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.EnumSet
+import java.util.TimeZone
+import kotlin.reflect.KClass
 
 sealed class ParseResult<T> {
     class Success<T>(val value: T) : ParseResult<T>()
     class Failure<T>(val exception: Exception) : ParseResult<T>()
 }
+
+typealias PropertyType<T> = (PropertyLocation, String) -> T
 
 fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): (PropertyLocation, String) -> T {
     return { location, stringValue ->
@@ -19,12 +28,17 @@ fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): (Prop
         when (parsed) {
             is ParseResult.Success<T> ->
                 parsed.value
-            is ParseResult.Failure<T> ->
-                throw Misconfiguration(
-                    "${location.source.description} ${location.nameInLocation} - invalid $typeName: $stringValue",
-                    parsed.exception)
+            is ParseResult.Failure<T> -> {
+                misconfiguration(location, typeName, stringValue, parsed.exception)
+            }
         }
     }
+}
+
+private fun misconfiguration(location: PropertyLocation, typeName: String?, stringValue: String, cause: Exception): Nothing {
+    throw Misconfiguration(
+        "${location.source.description} ${location.nameInLocation} - invalid ${typeName ?: "property value"}: $stringValue",
+        cause)
 }
 
 fun <T> propertyType(type: Class<T>, parse: (String) -> ParseResult<T>) = propertyType(type.simpleName, parse)
@@ -35,7 +49,7 @@ fun <T, X : Throwable> parser(exceptionType: Class<X>, parse: (String) -> T) = f
     try {
         ParseResult.Success(parse(s))
     }
-    catch(e: Exception) {
+    catch (e: Exception) {
         if (exceptionType.isInstance(e)) {
             ParseResult.Failure<T>(e)
         }
@@ -58,31 +72,26 @@ inline fun <reified T : Any> numericPropertyType(noinline parse: (String) -> T) 
 /**
  * The type of string properties
  */
-@JvmField
 val stringType = propertyType { ParseResult.Success(it) }
 
 /**
  * The type of Int properties
  */
-@JvmField
 val intType = numericPropertyType(String::toInt)
 
 /**
  * The type of Long properties
  */
-@JvmField
 val longType = numericPropertyType(String::toLong)
 
 /**
  * The type of Double properties
  */
-@JvmField
 val doubleType = numericPropertyType(String::toDouble)
 
 /**
  * The type of Boolean properties
  */
-@JvmField
 val booleanType = propertyType { ParseResult.Success(it.toBoolean()) }
 
 /**
@@ -100,7 +109,7 @@ fun <T : Any> enumType(enumType: Class<T>, allowed: Map<String, T>) = propertyTy
 fun <T : Enum<T>> enumType(enumClass: Class<T>, allowed: Iterable<T>) = enumType(enumClass, allowed.associate { it.name to it })
 
 inline fun <reified T : Enum<T>> enumType(allowed: Iterable<T>) = enumType(T::class.java, allowed.associate { it.name to it })
-inline fun <reified T: Any> enumType(vararg allowed: Pair<String, T>) = enumType(mapOf(*allowed))
+inline fun <reified T : Any> enumType(vararg allowed: Pair<String, T>) = enumType(mapOf(*allowed))
 inline fun <reified T : Enum<T>> enumType(vararg allowed: T) = enumType(listOf(*allowed))
 
 fun <T : Enum<T>> enumType(enumClass: java.lang.Class<T>) = enumType(enumClass, EnumSet.allOf(enumClass))
@@ -109,7 +118,6 @@ inline fun <reified T : Enum<T>> enumType() = enumType(T::class.java)
 /**
  * The type of URI properties
  */
-@JvmField
 val uriType = propertyType(parser<URI, URISyntaxException>(::URI))
 
 
@@ -117,26 +125,40 @@ private val defaultSeparator = Regex(",\\s*")
 
 fun <T> listType(elementType: (PropertyLocation, String) -> T, separator: Regex = defaultSeparator) =
     { p: PropertyLocation, s: String ->
-        s.split(separator).map { elementAsString -> elementType(p, elementAsString) }
+        s.split(separator).map { elementType(p, it) }
     }
 
+fun <T> setType(elementType: (PropertyLocation, String) -> T, separator: Regex = defaultSeparator): (PropertyLocation, String) -> Set<T> {
+    val listType = listType(elementType, separator)
+    return { p, s -> listType(p, s).toSet() }
+}
 
-inline fun <reified T:Any> temporalType(noinline fn: (String)->T) = propertyType(parser<T,DateTimeParseException>(fn))
 
-@JvmField
+inline fun <reified T : Any> temporalType(noinline fn: (String) -> T) = propertyType(parser<T, DateTimeParseException>(fn))
+
 val durationType = temporalType(Duration::parse)
 
-@JvmField
 val periodType = temporalType(Period::parse)
 
-@JvmField
 val localTimeType = temporalType(LocalTime::parse)
 
-@JvmField
 val localDateType = temporalType(LocalDate::parse)
 
-@JvmField
 val localDateTimeType = temporalType(LocalDateTime::parse)
 
-@JvmField
 val instantType = temporalType(Instant::parse)
+
+val timeZoneIdType = propertyType(parser<ZoneId, DateTimeException>(ZoneId::of))
+val timeZoneType = timeZoneIdType.wrappedAs(TimeZone::getTimeZone)
+
+inline fun <T, reified U: Any> PropertyType<T>.wrappedAs(noinline wrapper: (T) -> U): PropertyType<U> =
+    this.wrappedAs(U::class, wrapper)
+
+fun <T, U: Any> PropertyType<T>.wrappedAs(wrapperType: KClass<U>, wrapper: (T) -> U): PropertyType<U> =
+    fun(location: PropertyLocation, stringValue: String) =
+        try {
+            wrapper(this(location, stringValue))
+        }
+        catch (e: Misconfiguration) {
+            misconfiguration(location, wrapperType.simpleName, stringValue, e)
+        }

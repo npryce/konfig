@@ -11,7 +11,7 @@ import java.util.Properties
 /**
  * Error thrown when a mandatory property is missing
  */
-class Misconfiguration(message: String, cause: Exception? = null) : RuntimeException(message, cause)
+class Misconfiguration(override val message: String, cause: Exception? = null) : RuntimeException(message, cause)
 
 /**
  * A key that identifies a named, typed property and can convert a string representation into a value of the type.
@@ -90,7 +90,7 @@ interface Configuration {
      */
     fun <T> getOrElse(key: Key<T>, default: (Key<T>) -> T): T = getOrNull(key) ?: default(key)
     
-    fun contains(key: Key<*>) = getOrNull(key) != null
+    operator fun contains(key: Key<*>) = getOrNull(key) != null
     
     /**
      * Report the locations that will be searched for a configuration property, in priority order.  The value used
@@ -150,20 +150,17 @@ class ConfigurationProperties(
         /**
          * Returns the system properties as a Config object.
          */
-        @JvmStatic
         fun systemProperties() = ConfigurationProperties(System.getProperties(), Location("system properties"))
         
         /**
          * Load from resources relative to a class
          */
-        @JvmStatic
         fun fromResource(relativeToClass: Class<*>, resourceName: String) =
             loadFromResource(resourceName, relativeToClass.getResource(resourceName))
         
         /**
          * Load from resource within the system classloader.
          */
-        @JvmStatic
         fun fromResource(resourceName: String): ConfigurationProperties {
             val classLoader = ClassLoader.getSystemClassLoader()
             return loadFromResource(resourceName, classLoader.getResource(resourceName))
@@ -178,7 +175,6 @@ class ConfigurationProperties(
         /**
          * Load from file
          */
-        @JvmStatic
         fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null, Location(file.absolutePath, file.toURI())) {
             "file $file does not exist"
         }
@@ -303,18 +299,27 @@ fun search(first: Configuration, vararg rest: Configuration) = rest.fold(first, 
  * delegated to [configuration] as a look up for "db.password".
  */
 class Subset(
-    namePrefix: String,
-    private val configuration: Configuration
+    private val configuration: Configuration,
+    namePrefix: String? = null,
+    nameSuffix: String? = null
 ) : Configuration {
-    private val prefix = namePrefix + "."
+    // For backward compatibility with previous versions
+    constructor(namePrefix: String, configuration: Configuration):
+        this(configuration, namePrefix = namePrefix)
     
-    override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(prefixed(key))
+    private val prefix = namePrefix?.let { "$it." } ?: ""
+    private val suffix = nameSuffix?.let { ".$it" } ?: ""
     
-    override fun contains(key: Key<*>) = configuration.contains(prefixed(key))
+    override fun <T> getOrNull(key: Key<T>) = configuration.getOrNull(full(key))
     
-    override fun searchPath(key: Key<*>) = configuration.searchPath(prefixed(key))
+    override fun contains(key: Key<*>) = configuration.contains(full(key))
     
-    override fun list() = configuration.list().map { it.first to it.second.filterKeys { k -> k.startsWith(prefix) } }
+    override fun searchPath(key: Key<*>) = configuration.searchPath(full(key))
     
-    private fun <T> prefixed(key: Key<T>) = key.copy(name = prefix + key.name)
+    override fun list() =
+        configuration.list().map { it.first to it.second.filterKeys { k ->
+            (prefix.isEmpty() || k.startsWith(prefix)) && (suffix.isEmpty() || k.endsWith(suffix)) }
+        }
+    
+    private fun <T> full(key: Key<T>) = key.copy(name = prefix + key.name + suffix)
 }
