@@ -95,7 +95,7 @@ Konfig has a few ways to reduce boilerplate code when defining configuration key
     
     ...
     
-    val client = ApiClient(configuration[host], configuration[port])
+    val client = TcpClient(configuration[host], configuration[port])
     ```
 
 2) You can declare objects that extend PropertyGroup to define hierarchies of property keys that follow the Konfig naming conventions described above:
@@ -108,6 +108,6 @@ Konfig has a few ways to reduce boilerplate code when defining configuration key
 
     ...
 
-    val client = ApiClient(configuration[server.port]
+    val client = HttpClient(configuration[server.base_uri], configuration[server.api_key])
     ```
 
