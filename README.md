@@ -33,10 +33,8 @@ To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com
 1. Define typed property keys
 
     ```kotlin
-    object server : PropertyGroup() {
-        val port by intType
-        val host by stringType
-    }
+    val port by intType
+    val host by stringType
     ```
 
 2. Build a Configuration object that loads properties:
@@ -51,14 +49,14 @@ To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com
 3. Define some properties.  For example, in `defaults.properties`:
 
     ```properties
-    server.port=8080
-    server.host=0.0.0.0
+    port=8080
+    host=0.0.0.0
     ```
     
 4. Look up properties by key. They are returned as typed values, not strings, and so can be used directly:
 
     ```kotlin
-    val server = Server(config[server.port], config[server.host])
+    val server = Server(config[port], config[host])
     server.start()
     ```
 
