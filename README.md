@@ -33,8 +33,8 @@ To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com
 1. Define typed property keys
 
     ```kotlin
-    val port by intType
-    val host by stringType
+    val server_port = Key("server.port", intType)
+    val server_host = Key("server.host", stringType)
     ```
 
 2. Build a Configuration object that loads properties:
@@ -49,14 +49,14 @@ To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com
 3. Define some properties.  For example, in `defaults.properties`:
 
     ```properties
-    port=8080
-    host=0.0.0.0
+    server.port=8080
+    server.host=0.0.0.0
     ```
     
 4. Look up properties by key. They are returned as typed values, not strings, and so can be used directly:
 
     ```kotlin
-    val server = Server(config[port], config[host])
+    val server = Server(config[server_port], config[server_host])
     server.start()
     ```
 
@@ -72,7 +72,6 @@ Konfig can easily be extended with new property types and sources of configurati
 
 Konfig can report where configuration properties are searched for and where they were found.
 
-
 # Naming of Properties
 
 Konfig's Configuration objects expect property names to follow Java property name conventions: dots to represent hierarchy, lower-case identifiers within the hierarchy, hyphens to separate words in those identifiers. 
@@ -82,3 +81,33 @@ For example: `servers.file-storage.s3-api-key`, `servers.file-storage.s3-bucket`
 Each Configuration implementation maps from that naming convetion to the convention used by the underlying configuration store. E.g. the `EnvironmentVariables` implementation maps Java property name convention to the upper-case-and-underscores convention used for Unix environment variables.
 
 Configuration is an interface and Key<T> is a data class. This makes it straight forward to write an implementation of Configuration that translates the names of keys to different naming conventions, if your configuration follows an unusual convention.
+
+
+# Reflectomagic key definition
+
+Konfig has a few ways to reduce boilerplate code when defining configuration keys.
+
+1) You can use Kotlin's delgated property protocol to name keys after the constants that hold them:
+
+    ```
+    val host by stringType
+    val port by intType
+    
+    ...
+    
+    val client = ApiClient(configuration[host], configuration[port])
+    ```
+
+2) You can declare objects that extend PropertyGroup to define hierarchies of property keys that follow the Konfig naming conventions described above:
+
+    ```
+    object server : PropertyGroup() {
+        val base_uri by uriType   // defines a key named "server.base-uri"
+        val api_key by stringType // defines a key named "server.api-key"
+    }
+
+    ...
+
+    val client = ApiClient(configuration[server.port]
+    ```
+
