@@ -22,6 +22,7 @@ import com.natpryce.konfig.setType
 import com.natpryce.konfig.timeZoneIdType
 import com.natpryce.konfig.timeZoneType
 import com.natpryce.konfig.uriType
+import com.natpryce.konfig.within
 import com.natpryce.unittests.konfig.ParsingEnumeratedValues.E.A
 import com.natpryce.unittests.konfig.ParsingEnumeratedValues.E.B
 import com.natpryce.unittests.konfig.ParsingEnumeratedValues.E.C
@@ -41,14 +42,16 @@ private fun <T> assertParse(parser: (PropertyLocation, String) -> T, vararg succ
 }
 
 
-private inline fun <reified T> assertThrowsMisconfiguration(noinline parse: (PropertyLocation, String) -> T, vararg bad_inputs: String) {
-    val propertyTypeName = T::class.simpleName!!
-    
+private inline fun <reified T> assertThrowsMisconfiguration(
+    noinline parse: (PropertyLocation, String) -> T,
+    vararg bad_inputs: String,
+    detail: String = T::class.simpleName!!
+) {
     for (bad_input in bad_inputs) {
         assertThat(describe(bad_input), { parse(location(parse), bad_input) },
             throws<Misconfiguration>(has(Throwable::message, present(
                 containsSubstring(bad_input) and
-                    containsSubstring(propertyTypeName) and
+                    containsSubstring(detail) and
                     containsSubstring("property-key-in-source") and
                     containsSubstring("source-location")
             ))))
@@ -140,12 +143,12 @@ class ParsingEnumeratedValues {
     @Test
     fun parse_enums_by_name_and_value() {
         val theType = enumType("foo" to 1, "bar" to 2, "baz" to 3)
-    
+        
         assertParse(theType,
             "foo" to 1,
             "bar" to 2,
             "baz" to 3)
-    
+        
         assertThrowsMisconfiguration(theType, "xxx")
     }
     
@@ -163,7 +166,7 @@ class ParsingEnumeratedValues {
                 "A" to A,
                 "B" to B,
                 "C" to C)
-    
+            
             assertThrowsMisconfiguration(theType, "xxx")
             assertThrowsMisconfiguration(theType, "a")
             assertThrowsMisconfiguration(theType, "b")
@@ -227,9 +230,24 @@ class TimeZones {
             "xxx",
             "X",
             "UTC+123123212313223")
-    
+        
         assertThrowsMisconfiguration(timeZoneIdType, *badTimezones)
         assertThrowsMisconfiguration(timeZoneType, *badTimezones)
     }
     
+}
+
+class WithinRange {
+    @Test
+    fun `constraints comparable value to be within a range`() {
+        assertParse(intType.within(1..10),
+            "1" to 1,
+            "2" to 2,
+            "9" to 9,
+            "10" to 10)
+        
+        assertThrowsMisconfiguration(doubleType.within(1.0..10.0),
+            "0.0", "0.9999", "10.1", "11.0", "1000.0",
+            detail=(1.0..10.0).toString())
+    }
 }

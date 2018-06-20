@@ -22,7 +22,7 @@ sealed class ParseResult<T> {
 
 typealias PropertyType<T> = (PropertyLocation, String) -> T
 
-fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): (PropertyLocation, String) -> T {
+fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): PropertyType<T> {
     return { location, stringValue ->
         val parsed = parse(stringValue)
         when (parsed) {
@@ -37,7 +37,8 @@ fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): (Prop
 
 private fun misconfiguration(location: PropertyLocation, typeName: String?, stringValue: String, cause: Exception): Nothing {
     throw Misconfiguration(
-        "${location.source.description} ${location.nameInLocation} - invalid ${typeName ?: "property value"}: $stringValue",
+        "${location.source.description} ${location.nameInLocation} - invalid ${typeName
+            ?: "property value"}: $stringValue",
         cause)
 }
 
@@ -151,10 +152,10 @@ val instantType = temporalType(Instant::parse)
 val timeZoneIdType = propertyType(parser<ZoneId, DateTimeException>(ZoneId::of))
 val timeZoneType = timeZoneIdType.wrappedAs(TimeZone::getTimeZone)
 
-inline fun <T, reified U: Any> PropertyType<T>.wrappedAs(noinline wrapper: (T) -> U): PropertyType<U> =
+inline fun <T, reified U : Any> PropertyType<T>.wrappedAs(noinline wrapper: (T) -> U): PropertyType<U> =
     this.wrappedAs(U::class, wrapper)
 
-fun <T, U: Any> PropertyType<T>.wrappedAs(wrapperType: KClass<U>, wrapper: (T) -> U): PropertyType<U> =
+fun <T, U : Any> PropertyType<T>.wrappedAs(wrapperType: KClass<U>, wrapper: (T) -> U): PropertyType<U> =
     fun(location: PropertyLocation, stringValue: String) =
         try {
             wrapper(this(location, stringValue))
@@ -162,3 +163,13 @@ fun <T, U: Any> PropertyType<T>.wrappedAs(wrapperType: KClass<U>, wrapper: (T) -
         catch (e: Misconfiguration) {
             misconfiguration(location, wrapperType.simpleName, stringValue, e)
         }
+
+fun <T : Comparable<T>> PropertyType<T>.within(range: ClosedRange<T>): PropertyType<T> =
+    fun(location: PropertyLocation, stringValue: String) =
+        this(location, stringValue)
+            .also {
+                if (it !in range) {
+                    throw Misconfiguration(
+                        "${location.source.description} ${location.nameInLocation} - should be within ${range}: $stringValue")
+                }
+            }
