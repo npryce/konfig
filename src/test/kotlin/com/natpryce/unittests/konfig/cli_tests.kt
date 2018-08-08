@@ -5,13 +5,7 @@ import com.natpryce.hamkrest.containsSubstring
 import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.present
 import com.natpryce.hamkrest.throws
-import com.natpryce.konfig.CommandLineOption
-import com.natpryce.konfig.ConfigurationMap
-import com.natpryce.konfig.Key
-import com.natpryce.konfig.Misconfiguration
-import com.natpryce.konfig.overriding
-import com.natpryce.konfig.parseArgs
-import com.natpryce.konfig.stringType
+import com.natpryce.konfig.*
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -20,6 +14,7 @@ import java.io.ByteArrayOutputStream
 class CommandLineParsing {
     val optX = Key("opt.x", stringType)
     val optY = Key("opt.y", stringType)
+    val optZ = Key("opt.z", booleanType)
 
     @Test
     fun no_options() {
@@ -68,6 +63,15 @@ class CommandLineParsing {
     fun unrecognised_short_option() {
         assertThat({ parseArgs(arrayOf("-a", "foo", "bar"), CommandLineOption(optX, short = "x", long = "opt-x")) },
                 throws<Misconfiguration>())
+    }
+
+    @Test
+    fun flag_long_option() {
+        val (config, args) = parseArgs(arrayOf("--opt-z", "--opt-x", "foo", "bar"), CommandLineOption(optX), CommandLineOption(optZ))
+
+        assertThat(config[optX], equalTo("foo"))
+        assertThat(config[optZ], equalTo(true))
+        assertThat(args, equalTo(listOf("bar")))
     }
 
     @Test
