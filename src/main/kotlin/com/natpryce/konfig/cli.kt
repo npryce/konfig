@@ -89,10 +89,12 @@ fun parseArgs(args: Array<String>,
             this[opt]?.configKey ?: throw Misconfiguration("unrecognised command-line option $arg")
         
         fun storeNextArg(configNameByOpt: Map<String, CommandLineOption>, opt: String) {
-            i++
-            if (i >= args.size) throw Misconfiguration("no argument for $arg command-line option")
-            
-            properties[configNameByOpt.configNameFor(opt)] = CommandLineProperty(arg, args[i])
+            if (i + 1 >= args.size || args[i+1].startsWith("-")) {
+                properties[configNameByOpt.configNameFor(opt)] = CommandLineProperty(arg, "true")
+            } else {
+                i++
+                properties[configNameByOpt.configNameFor(opt)] = CommandLineProperty(arg, args[i])
+            }
         }
         
         when {
@@ -113,10 +115,10 @@ fun parseArgs(args: Array<String>,
                 files.add(arg)
             }
         }
-        
+
         i++
     }
-    
+
     return Pair(CommandLineConfiguration(options.asList(), properties), files)
 }
 
