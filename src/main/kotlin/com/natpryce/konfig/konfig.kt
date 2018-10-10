@@ -353,7 +353,7 @@ class Subset(
     
     override fun searchPath(key: Key<*>) = configuration.searchPath(full(key))
     
-    override fun locationOf(key: Key<*>) = if (keyIsInSubset(key.name)) configuration.locationOf(key) else null
+    override fun locationOf(key: Key<*>) = configuration.locationOf(full(key))
     
     override fun list() = configuration.list().map { it.first to it.second.filterKeys(this::keyIsInSubset) }
     

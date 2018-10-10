@@ -24,6 +24,7 @@ import com.natpryce.konfig.wrappedAs
 import org.junit.Test
 import java.io.File
 import java.util.Properties
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -349,6 +350,16 @@ class ConfigSubset {
         
         assertThat("pre/suff-ixed", Subset(fullSet, namePrefix = "a", nameSuffix = "b").list(), equalTo(listOf(
             fullSet.location to mapOf("a.x.b" to "axb"))))
+    }
+
+    @Test
+    fun location_of() {
+        val a = EmptyConfiguration
+        val b = Subset(Subset(ConfigurationMap("a.b.c" to "value"), "a"), "b")
+        val c = EmptyConfiguration
+        val config = a overriding b overriding c
+
+        assertEquals("a.b.c", config.locationOf(Key("c", stringType))?.key?.name)
     }
 }
 
