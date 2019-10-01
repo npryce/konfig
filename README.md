@@ -89,7 +89,7 @@ Konfig has a few ways to reduce boilerplate code when defining configuration key
 
 1) You can use Kotlin's delgated property protocol to name keys after the constants that hold them:
 
-    ```
+    ```kotlin
     val host by stringType // defines a key named "host"
     val port by intType    // defines a key named "port"
     
@@ -100,7 +100,7 @@ Konfig has a few ways to reduce boilerplate code when defining configuration key
 
 2) You can declare objects that extend PropertyGroup to define hierarchies of property keys that follow the Konfig naming conventions described above:
 
-    ```
+    ```kotlin
     object server : PropertyGroup() {
         val base_uri by uriType   // defines a key named "server.base-uri"
         val api_key by stringType // defines a key named "server.api-key"
