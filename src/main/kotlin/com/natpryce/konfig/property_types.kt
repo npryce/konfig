@@ -103,7 +103,7 @@ inline fun <reified T : Any> enumType(allowed: Map<String, T>) = enumType(T::cla
 
 fun <T : Any> enumType(enumType: Class<T>, allowed: Map<String, T>) = propertyType(enumType) { str ->
     allowed[str]
-        ?.let { ParseResult.Success(it) }
+        ?.let { ParseResult.Success<T>(it) }
         ?: ParseResult.Failure<T>(IllegalArgumentException("invalid value: $str; must be one of: ${allowed.keys}"))
 }
 
