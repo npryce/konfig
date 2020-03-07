@@ -6,7 +6,7 @@ import java.io.File
 import java.io.InputStream
 import java.net.URI
 import java.net.URL
-import java.util.Properties
+import java.util.*
 
 /**
  * Error thrown when a mandatory property is missing
@@ -192,7 +192,7 @@ class ConfigurationProperties(
          * Load from resource within the system classloader.
          */
         fun fromResource(resourceName: String): ConfigurationProperties {
-            val classLoader = ClassLoader.getSystemClassLoader()
+            val classLoader = Thread.currentThread().contextClassLoader
             return loadFromResource(resourceName, classLoader.getResource(resourceName))
         }
         
