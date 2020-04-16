@@ -14,10 +14,15 @@ open class PropertyKeys : Iterable<Key<*>> {
 
 open class PropertyGroup(private val outer: PropertyGroup? = null) : PropertyKeys() {
     private fun outer() = outer ?: javaClass.enclosingClass?.kotlin?.objectInstance as? PropertyGroup
-    private fun name() : String = namePrefix() + groupName()
-    private fun namePrefix() = outer()?.name()?.let { it + "." } ?: ""
-    private fun groupName() = javaClass.kotlin.simpleName?.substringBefore("$") ?:
-            throw IllegalArgumentException("cannot determine name of property group")
+    private fun name(): String = namePrefix() + groupName()
+    private fun namePrefix() = outer()?.name()?.let { "$it." } ?: ""
+
+    // anonymous objects don't get names in their KClass, so we have to resort to the JVM's name
+    private fun groupName() = javaClass.kotlin.simpleName?.substringBefore("$")
+        ?: javaClass.name.split("$").let { chunks ->
+            chunks.getOrNull(chunks.size - 2)
+                ?: throw IllegalArgumentException("cannot determine name of property group for $javaClass")
+        }
 
     fun <T> key(keySimpleName: String, type: (PropertyLocation, String) -> T): Key<T> {
         return Key((name() + "." + keySimpleName).replace('_', '-'), type)
