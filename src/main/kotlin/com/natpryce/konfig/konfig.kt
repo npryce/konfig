@@ -3,9 +3,11 @@
 package com.natpryce.konfig
 
 import java.io.File
-import java.io.InputStream
+import java.io.Reader
 import java.net.URI
 import java.net.URL
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.util.Properties
 
 /**
@@ -134,7 +136,7 @@ fun Configuration.missingPropertyMessage(key: Key<*>) =
     "${key.name} property not found; searched:\n${searchPath(key).description}"
 
 val List<PropertyLocation>.description: String
-    get() = map { " - ${it.description}" }.joinToString(separator = "\n", postfix = "\n")
+    get() = joinToString(separator = "\n", postfix = "\n") { " - ${it.description}" }
 
 
 abstract class LocatedConfiguration : Configuration {
@@ -183,37 +185,38 @@ class ConfigurationProperties(
         fun systemProperties() = ConfigurationProperties(System.getProperties(), Location("system properties"))
         
         /**
-         * Load from resources relative to a class
+         * Load from resources relative to a class using ISO-8859-1 by default.
          */
-        fun fromResource(relativeToClass: Class<*>, resourceName: String) =
-            loadFromResource(resourceName, relativeToClass.getResource(resourceName))
-        
+        fun fromResource(relativeToClass: Class<*>, resourceName: String, charset: Charset = StandardCharsets.ISO_8859_1) =
+            loadFromResource(resourceName, relativeToClass.getResource(resourceName), charset)
+
         /**
-         * Load from resource within the system classloader.
+         * Load from resource within the system classloader using ISO-8859-1 by default.
          */
-        fun fromResource(resourceName: String): ConfigurationProperties {
+        fun fromResource(resourceName: String, charset: Charset = StandardCharsets.ISO_8859_1): ConfigurationProperties {
             val classLoader = ClassLoader.getSystemClassLoader()
-            return loadFromResource(resourceName, classLoader.getResource(resourceName))
+            return loadFromResource(resourceName, classLoader.getResource(resourceName), charset)
         }
-        
-        private fun loadFromResource(resourceName: String, resourceUrl: URL?): ConfigurationProperties {
-            return load(resourceUrl?.openStream(), Location("resource $resourceName", resourceUrl?.toURI())) {
+
+        private fun loadFromResource(resourceName: String, resourceUrl: URL?, charset: Charset): ConfigurationProperties {
+            return load(resourceUrl?.openStream()?.reader(charset), Location("resource $resourceName", resourceUrl?.toURI())) {
                 "resource $resourceName not found"
             }
         }
         
         /**
-         * Load from file
+         * Load from file using ISO-8859-1 by default.
          */
-        fun fromFile(file: File) = load(if (file.exists()) file.inputStream() else null, Location(file.absolutePath, file.toURI())) {
-            "file $file does not exist"
-        }
-        
-        private fun load(input: InputStream?, location: Location, errorMessageFn: () -> String) =
-            (input ?: throw Misconfiguration(errorMessageFn())).use {
-                ConfigurationProperties(Properties().apply { load(input) }, location)
+        fun fromFile(file: File, charset: Charset = StandardCharsets.ISO_8859_1) =
+            load(if (file.exists()) file.reader(charset) else null, Location(file)) {
+                "file $file does not exist"
             }
-        
+
+        private fun load(reader: Reader?, location: Location, errorMessageFn: () -> String) =
+            (reader ?: throw Misconfiguration(errorMessageFn())).use {
+                ConfigurationProperties(Properties().apply { load(reader) }, location)
+            }
+
         /**
          * Load from optional file
          */
@@ -354,11 +357,11 @@ class Subset(
     override fun searchPath(key: Key<*>) = configuration.searchPath(full(key))
     
     override fun locationOf(key: Key<*>) = if (keyIsInSubset(key.name)) configuration.locationOf(key) else null
-    
+
     override fun list() = configuration.list().map { it.first to it.second.filterKeys(this::keyIsInSubset) }
-    
+
     private fun keyIsInSubset(k: String) =
         (prefix.isEmpty() || k.startsWith(prefix)) && (suffix.isEmpty() || k.endsWith(suffix))
-    
+
     private fun <T> full(key: Key<T>) = key.copy(name = prefix + key.name + suffix)
 }
