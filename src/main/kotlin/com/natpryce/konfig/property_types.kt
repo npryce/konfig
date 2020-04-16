@@ -24,8 +24,7 @@ typealias PropertyType<T> = (PropertyLocation, String) -> T
 
 fun <T> propertyType(typeName: String, parse: (String) -> ParseResult<T>): PropertyType<T> {
     return { location, stringValue ->
-        val parsed = parse(stringValue)
-        when (parsed) {
+        when (val parsed = parse(stringValue)) {
             is ParseResult.Success<T> ->
                 parsed.value
             is ParseResult.Failure<T> -> {
@@ -104,16 +103,18 @@ inline fun <reified T : Any> enumType(allowed: Map<String, T>) = enumType(T::cla
 fun <T : Any> enumType(enumType: Class<T>, allowed: Map<String, T>) = propertyType(enumType) { str ->
     allowed[str]
         ?.let { ParseResult.Success(it) }
-        ?: ParseResult.Failure<T>(IllegalArgumentException("invalid value: $str; must be one of: ${allowed.keys}"))
+        ?: ParseResult.Failure(IllegalArgumentException("invalid value: $str; must be one of: ${allowed.keys}"))
 }
 
-fun <T : Enum<T>> enumType(enumClass: Class<T>, allowed: Iterable<T>) = enumType(enumClass, allowed.associate { it.name to it })
+fun <T : Enum<T>> enumType(enumClass: Class<T>, allowed: Iterable<T>) = enumType(enumClass,
+    allowed.associateBy { it.name })
 
-inline fun <reified T : Enum<T>> enumType(allowed: Iterable<T>) = enumType(T::class.java, allowed.associate { it.name to it })
+inline fun <reified T : Enum<T>> enumType(allowed: Iterable<T>) = enumType(T::class.java,
+    allowed.associateBy { it.name })
 inline fun <reified T : Any> enumType(vararg allowed: Pair<String, T>) = enumType(mapOf(*allowed))
 inline fun <reified T : Enum<T>> enumType(vararg allowed: T) = enumType(listOf(*allowed))
 
-fun <T : Enum<T>> enumType(enumClass: java.lang.Class<T>) = enumType(enumClass, EnumSet.allOf(enumClass))
+fun <T : Enum<T>> enumType(enumClass: Class<T>) = enumType(enumClass, EnumSet.allOf(enumClass))
 inline fun <reified T : Enum<T>> enumType() = enumType(T::class.java)
 
 /**

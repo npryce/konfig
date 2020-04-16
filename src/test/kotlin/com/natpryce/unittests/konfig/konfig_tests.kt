@@ -23,6 +23,7 @@ import com.natpryce.konfig.stringType
 import com.natpryce.konfig.wrappedAs
 import org.junit.Test
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.util.Properties
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -363,7 +364,15 @@ class FromResources {
         assertThat(config[a], equalTo(1))
         assertThat(config[b], equalTo("two"))
     }
-    
+
+    @Test
+    fun can_load_utf8_from_resource() {
+        val config = ConfigurationProperties.fromResource(javaClass, "utf8.properties", StandardCharsets.UTF_8)
+
+        assertThat(config[Key("snowman", stringType)], equalTo("\u2603"))
+        assertThat(config[Key("mahjong", stringType)], equalTo("\uD83C\uDC06"))
+    }
+
     @Test
     fun can_load_from_absolute_resource() {
         val config = ConfigurationProperties.fromResource("com/natpryce/unittests/konfig/example.properties")
@@ -383,16 +392,27 @@ class FromResources {
     @Test
     fun can_load_from_optional_file() {
         val config = ConfigurationProperties.fromOptionalFile(File("src/test/resources/com/natpryce/unittests/konfig/example.properties"))
-        
+
         assertThat(config[a], equalTo(1))
         assertThat(config[b], equalTo("two"))
     }
-    
+
     @Test
     fun should_return_empty_config_when_load_from_optional_file_thats_not_present() {
         val config = ConfigurationProperties.fromOptionalFile(File("not.available.file"))
-        
+
         assertThat(config, equalTo<Configuration>(EmptyConfiguration))
+    }
+
+    @Test
+    fun can_load_utf8_from_file() {
+        val config = ConfigurationProperties.fromFile(
+            File("src/test/resources/com/natpryce/unittests/konfig/utf8.properties"),
+            StandardCharsets.UTF_8
+        )
+
+        assertThat(config[Key("snowman", stringType)], equalTo("\u2603"))
+        assertThat(config[Key("mahjong", stringType)], equalTo("\uD83C\uDC06"))
     }
 }
 
