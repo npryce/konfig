@@ -1,3 +1,0 @@
-#!/bin/sh
-set -e
-`dirname $0`/b clean uploadArchives "$@"
