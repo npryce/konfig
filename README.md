@@ -42,7 +42,7 @@ To get started, add `com.natpryce:konfig:<version>` as a dependency, import `com
     ```kotlin
     val config = systemProperties() overriding
                  EnvironmentVariables() overriding
-                 ConfigurationProperties.fromFile(File("/etc/myservice.properties")) overriding
+                 ConfigurationProperties.fromOptionalFile(File("/etc/myservice.properties")) overriding
                  ConfigurationProperties.fromResource("defaults.properties")
     ```
 
